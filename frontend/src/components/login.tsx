@@ -72,7 +72,7 @@ export default function Home() {
           },
           body: JSON.stringify({
             email: formData.email,
-            passWord: formData.passWord, // ต้องใช้ชื่อ field ว่า passWord ให้ตรง backend
+            passWord: formData.passWord,
           }),
         });
 
@@ -81,10 +81,7 @@ export default function Home() {
         if (response.ok) {
           // เพิ่ม console.log เพื่อดูค่า token
           console.log("Login successful, token:", data.token);
-          localStorage.setItem('token', data.token);
-          
-          // redirect ไปหน้า settings หรือหน้าอื่นๆ
-          router.push('/home');
+          window.location.href = "/home";
         } else {
           setError(data.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
         }

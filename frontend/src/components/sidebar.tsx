@@ -1,40 +1,35 @@
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter} from "next/navigation"
-import { useEffect, useState, createContext } from "react"
+import { useEffect,useRef,useState} from "react"
 import "@/styles/sidebar.css"
-import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
+import { useSelectedRobot, RobotInfo } from "@/app/contexts/SelectedRobotContext";
 
 export type RobotType = {
-  id: string;
-  robot_name: string;
-  batteryLevel?: number;
-  flowRate?: number;
-  waterLevel?: number;
-  robotStatus?: boolean;
-  pumpStatus?: boolean;
-  // เพิ่ม field อื่น ๆ ตามที่ใช้จริง
-};
+    id: number;
+    robot_name: string;
+    device_id: string;
+    isOnline: boolean;
 
-export type SelectedRobotContextType = {
-  selectedRobot: RobotType | null;
-  setSelectedRobot: (robot: RobotType | null) => void;
+    batteryLevel: number;     
+    flowRate: number;         
+    waterLevel: number;       
+    robotStatus: boolean;     
+    pumpStatus: boolean;      
 };
-
-export const SelectedRobotContext = createContext<SelectedRobotContextType | null>(null);
 
 export default function Sidebar() {
+    const robotPopupRef = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
     const router = useRouter();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [showRobots, setShowRobots] = useState(false);
-    const [user, setUser] = useState<{ name?: string } | null>(null);
+    const [user, setUser] = useState<{ name?: string; isAdmin?: boolean } | null>(null);
     const [robots, setRobots] = useState<RobotType[]>([]);
     const [loadingRobots, setLoadingRobots] = useState(false);
     const [hasFetched, setHasFetched] = useState(false);
     const { setSelectedRobot } = useSelectedRobot();
     const [profileImage, setProfileImage] = useState<string>("/avatar.jpg");
-
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
     const toggleRobots = () => {
         const next = !showRobots;
@@ -46,7 +41,8 @@ export default function Sidebar() {
     
     useEffect(() => {
         fetch("/robot/my_robot", {
-            credentials: "include", // สำคัญมากถ้าใช้ cookie
+            method: 'GET',
+            credentials: "include", 
         })
         .then(res => res.json())
         .then(data => {
@@ -57,11 +53,8 @@ export default function Sidebar() {
             }
         })
         .catch(err => console.error("Error fetching robots:", err));
-    }, []);
-
-    useEffect(() => {
-        // ดึงข้อมูล user จาก API
         fetch("/api/users/profile", {
+            method: 'GET',
             credentials: "include"
         })
         .then(res => {
@@ -71,6 +64,7 @@ export default function Sidebar() {
         .then(user => {
             setUser({
                 name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+                isAdmin: user.isAdmin || false,
             });
             setProfileImage(user.profileImage || "/avatar.jpg");
         })
@@ -130,20 +124,39 @@ export default function Sidebar() {
 
     }, [user, showRobots, hasFetched]);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                showRobots &&
+                robotPopupRef.current &&
+                !robotPopupRef.current.contains(event.target as Node)
+            ) {
+                setShowRobots(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showRobots]);
+
     const goToTokenPage = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         router.push("/token");
     }
 
-    const handleSelectRobot = (robot : RobotType) => {
+    const handleSelectRobot = (robot: RobotInfo) => {
         setSelectedRobot(robot);
         setIsSidebarOpen(false);
-    }
+        if (pathname !== "/home") router.push("/home");
+    };
     const handleLogout = async () => {
         await fetch("/api/users/logout", {
             method: "POST",
             credentials: "include"
         });
+        window.dispatchEvent(new Event("userChanged"));
         window.location.href = "/";
     };
 
@@ -159,12 +172,19 @@ export default function Sidebar() {
                         <img src="/logomine1.png" alt="ATJ Robot Logo" />
                         <h2>ATJ <span className="danger">Robot</span></h2>
                     </div>
-                    <div className="close" id="close-btn" onClick={toggleSidebar}>
+                    <div className="close" onClick={toggleSidebar}>
                         <span className="material-symbols-outlined">close</span>
                     </div>
                 </div>
 
                 <div className="sidebar">
+                    {user?.isAdmin && (
+                        <Link href="/admin" className={pathname === "/admin" ? "active" : ""}>
+                            <span className="material-symbols-outlined">admin_panel_settings</span>
+                            <div className="tooltip">จัดการ Token</div>
+                            <h3>จัดการ Token</h3>
+                        </Link>
+                    )}
                     <Link href="/home" className={pathname === "/home" ? "active" : ""}>
                         <span className="material-symbols-outlined">grid_view</span>
                         <div className="tooltip">Dashboard</div>
@@ -201,21 +221,31 @@ export default function Sidebar() {
                         </div>
 
                         {showRobots && (
-                            <div className="robot-list">
-                                {loadingRobots ? (
-                                    <p>กำลังโหลด...</p>
-                                ) : robots.length > 0 ? (
-                                    robots.map(robot => (
-                                        <p key={robot.id} className="robot-item" onClick={() => handleSelectRobot(robot)}>
-                                            {robot.robot_name}
-                                        </p>
-                                    ))
-                                ) : (
-                                    <p>ไม่มีหุ่นยนต์</p>
-                                )}
+                            <div className="robot-popup" ref={robotPopupRef}>
+                                <div className="robot-popup-content">
+                                    {loadingRobots ? (
+                                        <p>กำลังโหลด...</p>
+                                    ) : robots.length > 0 ? (
+                                        robots.map((robot) => (
+                                            <p
+                                                key={robot.id}
+                                                className="robot-item"
+                                                onClick={() => {
+                                                    handleSelectRobot(robot);
+                                                    setShowRobots(false); // ปิด popup เมื่อเลือก
+                                                }}
+                                            >
+                                                {robot.robot_name}
+                                            </p>
+                                        ))
+                                    ) : (
+                                        <p>ไม่มีหุ่นยนต์</p>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
+
                     <div className="sidebar-footer">
                         <div className="user-profile">
                             <img src={profileImage} alt="User Profile" className="profile-pic" />

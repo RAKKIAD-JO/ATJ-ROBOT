@@ -48,7 +48,7 @@ export default function AssignRobot() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    "toker": robotToken,
+                    "token": robotToken,
                     "robot_name": robotName,
                 }),
             });
@@ -93,6 +93,7 @@ export default function AssignRobot() {
                             placeholder="Robot Name"
                             value={robotName}
                             onChange={(e) => setRobotName(e.target.value)}
+                            maxLength={14}
                             required
                         />
                         <button type="submit" disabled={loading}>

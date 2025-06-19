@@ -74,7 +74,9 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id },
+      { userId: user.id,
+        isAdmin: user.is_admin || false,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -224,7 +226,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
   console.log("GET /profile - userId:", userId); // ดู userId จาก token
   try {
     const result = await pool.query(
-      `SELECT id, first_name, last_name, phone, email, profile_image FROM users WHERE id = $1`,
+      `SELECT id, first_name, last_name, phone, email, profile_image ,is_admin FROM users WHERE id = $1`,
       [userId]
     );
     if (result.rows.length === 0) {
@@ -236,7 +238,8 @@ router.get("/profile", authenticateToken, async (req, res) => {
       lastName: user.last_name,
       phone: user.phone,
       email: user.email,
-      profileImage: user.profile_image
+      profileImage: user.profile_image,
+      isAdmin: user.is_admin
     });
   } catch (error) {
     console.error("GET PROFILE ERROR:", error);
@@ -257,8 +260,6 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
   }
   let profileImagePath = req.file ? `/uploads/profile_Image/${req.file.filename}` : undefined;
 
-  console.log('req.file:', req.file);
-
   try {
     // ถ้ามีไฟล์ใหม่ ให้ลบไฟล์เดิมก่อน
     if (req.file) {
@@ -277,23 +278,41 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
       }
     }
 
+    // เตรียม query และ params ตามฟิลด์ที่ส่งมา
+    const fields = [];
+    const params = [];
+    let idx = 1;
+
+    if (firstName !== undefined && firstName !== "") {
+      fields.push(`first_name = $${idx++}`);
+      params.push(firstName);
+    }
+    if (lastName !== undefined && lastName !== "") {
+      fields.push(`last_name = $${idx++}`);
+      params.push(lastName);
+    }
+    if (phone !== undefined) {
+      fields.push(`phone = $${idx++}`);
+      params.push(phone);
+    }
+    if (profileImagePath !== undefined) {
+      fields.push(`profile_image = $${idx++}`);
+      params.push(profileImagePath);
+    }
     if (newPassword) {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await pool.query(
-        `UPDATE users SET first_name = $1, last_name = $2, phone = $3, password = $4, profile_image = $5 WHERE id = $6`,
-        [firstName, lastName, phone, hashedPassword, profileImagePath, userId]
-      );
-    } else if (profileImagePath) {
-      await pool.query(
-        `UPDATE users SET first_name = $1, last_name = $2, phone = $3, profile_image = $4 WHERE id = $5`,
-        [firstName, lastName, phone, profileImagePath, userId]
-      );
-    } else {
-      await pool.query(
-        `UPDATE users SET first_name = $1, last_name = $2, phone = $3 WHERE id = $4`,
-        [firstName, lastName, phone, userId]
-      );
+      fields.push(`password = $${idx++}`);
+      params.push(hashedPassword);
     }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ message: "ไม่มีข้อมูลที่ต้องการอัปเดต" });
+    }
+
+    params.push(userId);
+    const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = $${idx}`;
+    await pool.query(sql, params);
+
     res.json({ message: "อัปเดตข้อมูลสำเร็จ" });
   } catch (error) {
     res.status(500).json({ message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล" });

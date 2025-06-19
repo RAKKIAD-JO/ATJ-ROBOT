@@ -24,7 +24,7 @@ export default function sparying() {
                                     <p>ชื่อสารเคมี : </p>
                                 </div>
                                 <div className="calss-two">
-                                    <p>ปริมาณการใช้สารเคมี : </p>
+                                    {/* <p>ปริมาณการใช้สารเคมี : </p> */}
                                     <p>พื้นที่ : </p>
                                     <p>ระยะเวลา : </p>
                                 </div>
@@ -36,3 +36,4 @@ export default function sparying() {
         </main>
     )
 }
+

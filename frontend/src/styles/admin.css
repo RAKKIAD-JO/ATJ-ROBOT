@@ -1,0 +1,159 @@
+.admin-container {
+    width: 80%;
+    margin: 0 auto;
+    padding: 2rem;
+    margin-left: 15vw;
+    font-family: 'Kanit', sans-serif;
+}
+
+.admin-container h1 {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.generate-form {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.generate-form input[type="text"] {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 10px;
+    background-color: #f3eeee;
+    color: #555;
+    font-size: 1rem;
+    flex: 1;
+}
+
+.generate-form button {
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.generate-form button:hover {
+    background-color: #148b9e;
+}
+
+.token-result {
+    margin: 1rem 0;
+    background-color: #f1f1f1;
+    padding: 1rem;
+    border-radius: 10px;
+    color: #333;
+}
+
+.filter-section-admin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.status-filter-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-section-admin button {
+    font-family: kanit, sans-serif;
+    background: none;
+    border: none;
+    font-weight: 400;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.filter-section-admin button:hover {
+    color: #17a2b8;
+
+}
+
+.filter-section-admin button.active {
+    color: #17a2b8;
+    text-decoration: underline;
+}
+
+.filter-section-admin input {
+    padding: 0.5rem 2.5rem 0.5rem 1rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: none;
+    background-color: #f1f0f3;
+    color: #333;
+    width: 350px;
+}
+.search-wrapper span {
+  position: absolute;
+  right: 0.8rem;
+  font-size: 1.2rem;
+  color: #777;
+  pointer-events: none; /* ไม่ให้คลิกโดนไอคอนแทน input */
+}
+
+.robot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.2rem;
+}
+
+.robot-card {
+    background-color: #ffffff;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 1rem 1.2rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: default;
+    overflow: hidden;
+}
+
+.robot-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+.robot-card h3 {
+    font-size: 1.2rem;
+    color: #17a2b8;
+    margin-bottom: 0.5rem;
+}
+
+.robot-card p {
+    margin: 0.3rem 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.robot-card  button{
+    background: none;
+    font-family: kanit, sans-serif;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.robot-card button:hover {
+    color: #17a2b8;
+}
+
+
+.robot-card.online {
+    border-left: 5px solid #17a2b8;
+}
+
+.robot-card.offline {
+    border-left: 5px solid #ccc;
+}

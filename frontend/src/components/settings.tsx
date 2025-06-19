@@ -17,6 +17,10 @@ export default function SettingsPage() {
   const [profilePhone, setProfilePhone] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const router = useRouter();
+
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   useEffect(() => {
     fetch("/api/users/profile", {
       credentials: "include"
@@ -24,7 +28,6 @@ export default function SettingsPage() {
       .then(res => {
         if (res.status === 403 || res.status === 401) {
           setErrorMessage('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-          // เพิ่ม redirect ไปหน้า login
           router.replace('/');
           return;
         }
@@ -32,23 +35,19 @@ export default function SettingsPage() {
       })
       .then(user => {
         if (!user) return;
-        const name = (user.firstName || "") + " " + (user.lastName || "");
-        setProfileFullName(name);
+        // สมมุติ API ส่ง { firstName, lastName, email, phone, profileImage }
+        setProfileFullName(
+          [user.firstName, user.lastName].filter(Boolean).join(" ")
+        );
         setProfilePhone(user.phone || "");
         setProfileEmail(user.email || "");
-        setEmail(user.email || "");
         setProfileImage(user.profileImage || "/avatar.jpg");
+        setEmail(user.email || "");
       })
       .catch((err) => {
         setErrorMessage('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
       });
   }, [router]);
-
-  // เพิ่ม useEffect สำหรับ set fullName/phone แค่ครั้งแรกที่โหลด user
-  useEffect(() => {
-    if (profileFullName && fullName === "") setFullName(profileFullName);
-    if (profilePhone && phone === "") setPhone(profilePhone);
-  }, [profileFullName, profilePhone]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,18 +61,32 @@ export default function SettingsPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (newPassword !== confirmPassword) {
+    // ตรวจสอบรหัสผ่านใหม่และยืนยันรหัสผ่าน
+    if (newPassword && newPassword !== confirmPassword) {
       setErrorMessage('รหัสผ่านใหม่และรหัสผ่านยืนยันไม่ตรงกัน');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append('fullName', fullName);
-      formData.append('phone', phone);
-      if (newPassword) formData.append('newPassword', newPassword);
+
+      // ส่งเฉพาะ field ที่ผู้ใช้กรอก (ไม่ส่ง field ที่ไม่ได้เปลี่ยน)
+      if (fullName.trim() !== profileFullName.trim() && fullName.trim() !== "") {
+        formData.append('fullName', fullName.trim());
+      }
+      if (phone.trim() !== profilePhone.trim() && phone.trim() !== "") {
+        formData.append('phone', phone.trim());
+      }
+      if (newPassword) {
+        formData.append('newPassword', newPassword);
+      }
       if (fileInputRef.current?.files?.[0]) {
         formData.append('profileImage', fileInputRef.current.files[0]);
+      }
+
+      if ([...formData.keys()].length === 0) {
+        setErrorMessage('กรุณากรอกข้อมูลที่ต้องการเปลี่ยน');
+        return;
       }
 
       const response = await fetch('/api/users/profile', {
@@ -90,18 +103,15 @@ export default function SettingsPage() {
       if (!response.ok) {
         throw new Error('Failed to update profile');
       }
-      
-      // เมื่อบันทึกสำเร็จ ให้ update ข้อมูลแสดงผล
-      setProfileFullName(fullName);
-      setProfilePhone(phone);
-      setProfileEmail(email);
 
       setErrorMessage('');
       alert('อัปเดตข้อมูลสำเร็จ');
-      router.push('/settings');
+      // อัปเดตข้อมูลใหม่ (fetch profile ใหม่หรือ reload)
+      window.location.reload();
     } catch (error) {
       console.error('Error updating profile:', error);
       setErrorMessage('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
+      router.replace('/settings');
     }
   };
 
@@ -172,24 +182,41 @@ export default function SettingsPage() {
                 placeholder="เบอร์โทรศัพท์ของคุณ"
               />
             </div>
+
             <div className="column">
               <label>รหัสผ่านใหม่</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="รหัสผ่านใหม่ของคุณ"
-              />
+              <div className="password-wrapper">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="รหัสผ่านใหม่ของคุณ"
+                />
+                <span
+                  className="material-symbols-outlined toggle-icon"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? "visibility_off" : "visibility"}
+                </span>
+              </div>
             </div>
 
             <div className="column">
               <label>ยืนยันรหัสผ่าน</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="ยืนยันรหัสผ่านใหม่ของคุณ"
-              />          
+              <div className="password-wrapper">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="ยืนยันรหัสผ่านใหม่ของคุณ"
+                />
+                <span
+                  className="material-symbols-outlined toggle-icon"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? "visibility_off" : "visibility"}
+                </span>
+              </div>
               {errorMessage && <p className="error-message">{errorMessage}</p>}
             </div>
             

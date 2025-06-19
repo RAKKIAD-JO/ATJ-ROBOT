@@ -87,7 +87,7 @@ b {
   left: 1rem;
   font-size: 1rem;
   color: var(--color-dark);
-  z-index: 1100;
+  z-index: 1000;
   cursor: pointer;
 }
 
@@ -95,7 +95,8 @@ b {
 /* ======== Sidebar Layout ======== */
 aside {
   position: fixed;
-  min-width: 15vw;
+  width: 250px;
+  max-width: 100%;
   height: 100vh;
 }
 
@@ -184,26 +185,6 @@ aside .sidebar a:hover span {
   margin-left: 1rem;
 }
 
-/* .sidebar-footer {
-  margin: 2rem 0 1rem 0;
-  padding-top: 1rem;
-  border-top: 1px solid #ccc;
-  color: #333;
-  font-size: 0.9rem;
-} */
-
-.user-profile {
-  /* text-decoration: none; */
-  display: flex;
-  color: var(--color-info-dark);
-  margin-left: 2rem;
-  gap: 1rem;
-  align-items: center;
-  position: relative;
-  height: 3rem;
-  transition: all 300ms ease;
-  margin-bottom: 1rem;
-}
 
 .profile-pic {
   width: 2rem;
@@ -222,19 +203,44 @@ aside .sidebar a .tooltip {
   display: none;
 }
 
-.robots-toggle{
+.robots-toggle {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   margin-left: 1.6rem;
   cursor: pointer;
   margin-top: 10px;
   padding: 0cap 0.5rem;
   gap: 1rem;
-  border-bottom: #b5b0b0 solid 0.5px;
 
 }
 
-.robots-toggle span{
+.robots-toggle button {
+  background: none;
+  border: none;
+  color: var(--color-info-dark);
+  font-size: 1.2rem;
+  cursor: pointer;
+
+}
+
+.robots-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-robot-link {
+  color: #666;
+  font-size: 20px;
+  text-decoration: none;
+}
+
+.add-robot-link:hover {
+  color: #000;
+}
+
+.robots-toggle span {
   font-size: 1.6rem;
   color: var(--color-info-dark);
 }
@@ -244,32 +250,127 @@ aside .sidebar a .tooltip {
   color: var(--color-info-dark);
 }
 
-.robot-list {
+.robot-popup-content {
   padding-left: 20px;
 }
 
-.robot-list h4 {
+.robot-popup-content h4 {
   margin: 5px 0;
   cursor: pointer;
   color: #fff;
 }
 
-.robot-list h4:hover {
-  color: #f39c12;
+.robot-popup-content .robot-item {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }
 
-.robot-list p{
+.robot-item {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.robot-item:hover {
+  background-color: #f0f0f0;
+}
+
+
+.robot-popup-content p {
+  cursor: pointer;
   margin-top: 9px;
   margin-left: 3.4rem;
   font-size: 0.8rem;
   color: var(--color-info-dark);
 }
 
-@media screen and (max-width: 1200px) {
+.robot-popup-content p:hover {
+  color: var(--color-primary);
+}
+
+.sidebar button {
+  display: flex;
+  background: none;
+  border: none;
+  cursor: pointer;
+  gap: 1rem;
+  color: var(--color-dark);
+  font-family: var(--font-kanit), sans-serif;
+
+}
+
+.sidebar .sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  margin-left: 10px;
+  position: absolute;
+  bottom: 4rem;
+}
+
+.user-profile {
+  margin-left: 27px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-profile h3 {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-dark);
+}
+
+.logout {
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  width: 100%;
+
+}
+
+.logout-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 29px;
+}
+
+.sidebar button:hover {
+  color: var(--color-primary);
+}
+
+.logout-button h3 {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+
+@media screen and (max-width: 1400px) {
   aside {
-    width: 10vw;
+    position: fixed;
+    width: 200px;
+    max-width: 100%;
     height: 100vh;
-    /* background: #dc3545; */
+    /* background-color: #000; */
   }
 
   aside .logo h2 {
@@ -326,13 +427,33 @@ aside .sidebar a .tooltip {
     opacity: 1;
   }
 
+  .robots-toggle {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    margin-left: 1.6rem;
+    cursor: pointer;
+    margin-top: 10px;
+    padding: 0cap 0.5rem;
+    gap: 1rem;
+
+  }
+
+  .robot-popup-content p {
+    cursor: pointer;
+    margin-top: 9px;
+    margin-left: 3.4rem;
+    font-size: 0.8rem;
+    color: var(--color-info-dark);
+  }
+
 }
 
 @media screen and (min-width: 768px) and (max-width: 1024px) {
   aside {
     width: 10vw;
     height: 100vh;
-    /* background: #dc3545; */
+    z-index: 1000;
   }
 
   aside .logo h2 {
@@ -389,6 +510,40 @@ aside .sidebar a .tooltip {
     opacity: 1;
   }
 
+  .robots-section {
+    position: relative;
+  }
+
+  .robot-popup {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 250px;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    z-index: 100;
+    margin-top: 0.5rem;
+  }
+
+  .robot-popup-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 1rem;
+
+  }
+
+  .robot-item {
+    padding: 0.5rem 0;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .robot-item:hover {
+    background: #f0f0f0;
+  }
+
 
 }
 
@@ -400,7 +555,6 @@ aside .sidebar a .tooltip {
     left: 1rem;
     font-size: 1rem;
     color: var(--color-dark);
-    background: #f0f0f0;
     z-index: 1200;
     cursor: pointer;
     transition: left 0.3s ease;
@@ -412,12 +566,11 @@ aside .sidebar a .tooltip {
     font-size: 20px;
     color: #17a2b8;
     transition: transform 0.3s ease, color 0.3s ease;
-    
+
   }
 
   .menu-icon.active {
     left: 3.7rem;
-    background: #ffffff;
   }
 
   aside {
@@ -426,9 +579,9 @@ aside .sidebar a .tooltip {
     max-width: 300px;
     height: 100vh;
     position: fixed;
+    margin-left: 10px;
     top: 0;
     left: -100%;
-    background: #ffffff;
     z-index: 1000;
     transition: left 0.3s ease;
   }
@@ -466,25 +619,124 @@ aside .sidebar a .tooltip {
     transition: all 400ms ease;
   }
 
+  .robots-toggle {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    margin-left: 1.45rem;
+    cursor: pointer;
+    margin-top: 10px;
+    gap: 0.25rem;
+  }
+
+  .robots-toggle span {
+    font-size: 1rem;
+
+  }
+
+  .robots-section {
+    position: relative;
+  }
+
+  .robot-popup {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 150px;
+    background: white;
+    /* border: 1px solid #ccc; */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    z-index: 100;
+    margin-top: 0.5rem;
+  }
+
+  .robot-popup-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 0.5rem;
+
+  }
+
+  .robot-item {
+    padding: 0.5rem 0;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .robot-item:hover {
+    color: var(--color-primary);
+    background: #f0f0f0;
+  }
+
+  .sidebar button {
+    display: flex;
+    background: none;
+    border: none;
+    cursor: pointer;
+
+  }
+
+  .sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    position: absolute;
+    bottom: 4rem;
+  }
+
+  .user-profile {
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .logout {
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    width: 100%;
+
+  }
+
+  .logout-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-left: 29px;
+  }
+
+  .logout-button span {
+    font-size: 1.2rem;
+    color: var(--color-info-dark);
+  }
+
+  .sidebar button:hover {
+    color: var(--color-primary);
+  }
+
+  .logout-button h3 {
+    font-family: var(--font-kanit), sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+
   .profile-pic {
-    width: 1rem;
-    height: 1rem;
+    width: 1.5rem;
+    height: 1.5rem;
     border-radius: 50%;
     object-fit: cover;
   }
 
-  .user-profile {
-    /* text-decoration: none; */
-    display: flex;
-    color: var(--color-info-dark);
-    margin-left: 1.2rem;
-    gap: 1rem;
-    align-items: center;
-    position: relative;
-    height: 3rem;
-    transition: all 300ms ease;
-    margin-bottom: 1rem;
-  }
 
   aside .sidebar a .tooltip {
     display: block;
