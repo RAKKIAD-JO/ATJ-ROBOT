@@ -1,0 +1,89 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    container_name: server-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: web_server
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: server-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    networks:
+      - app-net
+
+  express:
+    build: ./backend
+    container_name: server-express
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_USER=admin
+      - DB_HOST=db
+      - DB_DATABASE=web_server
+      - DB_PASSWORD=admin123
+      - DB_PORT=5432
+      - EMAIL_USER=atjrobot44@gmail.com
+      - EMAIL_PASS=ppnf xqup fpqn ztar
+    depends_on:
+      - db
+    networks:
+      - app-net
+    volumes:
+      - ./backend/uploads/profile_Image:/home/adminexe/web-server/backend/uploads/profile_Image
+
+  nextjs:
+    build: ./frontend
+    container_name: server-nextjs
+    ports:
+      - "4000:4000"
+    networks:
+      - app-net
+
+  mongodb:
+    image: mongo:latest
+    container_name: server-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-net
+
+  iot-server:
+    build: ./iot-server
+    container_name: server-iot-server
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/esp32_db
+    networks:
+      - app-net
+
+volumes:
+  db_data:
+  mongo-data:
+
+networks:
+  app-net:
+    driver: bridge
