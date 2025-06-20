@@ -13,19 +13,15 @@
     max-width: 900px;
     display: flex;
     background: rgb(255, 255, 255);
-    /* padding: 0 2.5rem; */
     border-radius: 12px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
 .form-box {
-    /* background: white; */
     padding: 2rem 2.5rem;
     border-radius: 12px;
-    /* border-right: 2px solid rgb(53, 131, 164); */
     width: 100%;
     max-width: 400px;
-    /* box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); */
 }
 
 .form-box h2 {
@@ -87,7 +83,6 @@
     justify-content: center;
     align-items: center;
     padding: 2rem 5rem;
-    /* background-color: #2563eb; */
 }
 
 .image-box img {
@@ -99,4 +94,48 @@
 .image-box h1 {
     color: rgb(53, 131, 164);
     font-size: 2rem;
+}
+
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    .container-login {
+        z-index: 1000;
+    }
+
+    .crad-login {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    background: rgb(255, 255, 255);
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+}
+
+@media screen and (max-width: 767px) {
+    .container-login {
+        background-color: white;
+        z-index: 10000;
+    }
+
+    .crad-login {
+        flex-direction: column-reverse;
+        width: 100%;
+        max-width: 100%;
+        box-shadow: none;
+    }
+
+    .image-box h1 {
+    color: rgb(53, 131, 164);
+    font-size: 2rem;
+    text-align: center;
+}
+
+    .image-box img {
+    width: 200px;
+    height: 200px;
+    border-radius: 12px;
+}
+
+
 }

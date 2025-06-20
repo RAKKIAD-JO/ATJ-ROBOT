@@ -11,6 +11,7 @@ const axios = require("axios"); // เพิ่มบนสุดถ้ายั
 const fs = require('fs');
 const util = require('util');
 const unlinkAsync = util.promisify(fs.unlink);
+const crypto = require('crypto');
 
 
 // ตั้งค่า storage สำหรับ multer
@@ -29,6 +30,7 @@ const upload = multer({ storage });
 router.post("/register", async (req, res) => {
   const { firstName, lastName, passWord, phoneNumber, email } = req.body;
   try {
+    // ตรวจสอบว่ามี email ซ้ำไหม
     const checkEmail = await pool.query(
       `SELECT * FROM users WHERE email = $1`,
       [email]
@@ -37,15 +39,74 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email นี้มีผู้ใช้แล้ว" });
     }
 
+    // เข้ารหัสรหัสผ่าน
     const hashedPassword = await bcrypt.hash(passWord, 10);
+
+    // บันทึกผู้ใช้ใหม่
     const result = await pool.query(
-      `INSERT INTO users (first_name, last_name, phone, email, password) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      `INSERT INTO users (first_name, last_name, phone, email, password, is_verified)
+       VALUES ($1, $2, $3, $4, $5, false) RETURNING *`,
       [firstName, lastName, phoneNumber, email, hashedPassword]
     );
 
+    // ✅ สร้าง token ยืนยันอีเมล
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 10 * 60000); // 10 นาที
+
+    await pool.query(
+      `INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)`,
+      [email, token, expiresAt]
+    );
+
+    // ✅ สร้าง transporter เพื่อส่งอีเมล
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"ATJRobot" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "ยืนยันอีเมลของคุณ",
+      html: `
+    <div style="font-family: 'Kanit', sans-serif; background: #f0f4f8; padding: 40px;">
+      <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://img.icons8.com/color/96/verified-account--v1.png" alt="verify icon" style="width: 60px; margin-bottom: 10px;">
+          <h2 style="color: #333333; margin: 0;">ยืนยันอีเมลของคุณ</h2>
+        </div>
+        <p style="color: #555555; font-size: 16px; text-align: center;">
+          ขอบคุณที่สมัครใช้งาน ATJRobot<br>
+          กรุณาคลิกลิงก์ด้านล่างเพื่อยืนยันอีเมลของคุณ:
+        </p>
+        <div style="text-align: center; margin-top: 30px;">
+          <a href="http://localhost:5000/api/users/verify-email?email=${email}&token=${token}"
+             style="display: inline-block; padding: 14px 28px; background-color: #17a2b8; color: white; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 50px; transition: background 0.3s;">
+            ยืนยันอีเมล
+          </a>
+        </div>
+        <p style="margin-top: 30px; font-size: 14px; color: #888888; text-align: center;">
+          * ลิงก์จะหมดอายุใน 10 นาที<br>
+          หากคุณไม่ได้ทำการสมัคร กรุณาละเว้นอีเมลนี้
+        </p>
+      </div>
+    </div>
+  `,
+    });
+
     res.status(201).json({
-      message: "ลงทะเบียนสำเร็จ",
-      user: result.rows[0],
+      message: "ลงทะเบียนสำเร็จ กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ",
+      user: {
+        id: result.rows[0].id,
+        firstName: result.rows[0].first_name,
+        lastName: result.rows[0].last_name,
+        email: result.rows[0].email,
+        phone: result.rows[0].phone,
+        isVerified: result.rows[0].is_verified,
+      },
     });
   } catch (error) {
     console.error("Error registering user:", error);
@@ -67,6 +128,11 @@ router.post("/login", async (req, res) => {
     }
 
     const user = userResult.rows[0];
+    if (!user.is_verified) {
+      return res
+        .status(403)
+        .json({ message: "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" });
+    }
     const isMatch = await bcrypt.compare(passWord, user.password);
 
     if (!isMatch) {
@@ -344,6 +410,81 @@ router.post("/add-toker", authenticateToken, async (req, res) => {
     }
     console.error(error);
     res.status(500).json({ error: "Server error" });
+  }
+});
+// ✅ GET TOKEN EMAIL
+router.get("/verify-email", async (req, res) => {
+  const { email, token } = req.query;
+
+  if (!email || !token) {
+    return res.send(`
+  <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+    <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+      <img src="https://img.icons8.com/fluency/96/error.png" alt="Error Icon" style="width: 60px; margin-bottom: 20px;" />
+      <h2 style="color: #e74c3c; margin-bottom: 10px;">ลิงก์ไม่ถูกต้อง</h2>
+      <p style="color: #555555; font-size: 16px;">กรุณาตรวจสอบลิงก์อีกครั้ง หรือลงทะเบียนใหม่</p>
+    </div>
+  </div>
+`);
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT * FROM email_verifications WHERE email = $1 AND token = $2`,
+      [email, token]
+    );
+
+    const record = result.rows[0];
+
+    if (!record) {
+      return res.send(`
+    <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+      <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+        <img src="https://img.icons8.com/color/96/cancel--v1.png" alt="Not Found Icon" style="width: 60px; margin-bottom: 20px;" />
+        <h2 style="color: #e67e22; margin-bottom: 10px;">ไม่พบข้อมูลการยืนยัน</h2>
+        <p style="color: #555555; font-size: 16px;">ลิงก์ไม่ถูกต้อง หรือคุณได้ยืนยันอีเมลไปแล้ว</p>
+      </div>
+    </div>
+  `);
+    }
+
+    if (new Date() > new Date(record.expires_at)) {
+      return res.send(`
+    <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+      <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+        <img src="https://img.icons8.com/color/96/hourglass--v1.png" alt="Expired Icon" style="width: 60px; margin-bottom: 20px;" />
+        <h2 style="color: #d35400; margin-bottom: 10px;">ลิงก์หมดอายุ</h2>
+        <p style="color: #555555; font-size: 16px;">กรุณาลงทะเบียนใหม่ หรือขอการยืนยันอีกครั้ง</p>
+      </div>
+    </div>
+  `);
+    }
+
+    // อัปเดตให้ผู้ใช้ verified
+    await pool.query(`UPDATE users SET is_verified = true WHERE email = $1`, [
+      email,
+    ]);
+
+    // ลบ token เพื่อไม่ให้ใช้ซ้ำ
+    await pool.query(`DELETE FROM email_verifications WHERE email = $1`, [
+      email,
+    ]);
+
+    return res.send(`
+  <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+    <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+      <img src="https://img.icons8.com/color/96/verified-account--v1.png" alt="Verified Icon" style="width: 60px; margin-bottom: 20px;" />
+      <h2 style="color: #2c3e50; margin-bottom: 10px;">ยืนยันอีเมลสำเร็จ!</h2>
+      <p style="color: #555555; font-size: 16px;">ขอบคุณที่ยืนยันอีเมลของคุณ<br>คุณสามารถใช้งานระบบได้ทันที</p>
+    </div>
+  </div>
+`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(`
+      <h2>เกิดข้อผิดพลาด</h2>
+      <p>กรุณาลองใหม่ภายหลัง</p>
+    `);
   }
 });
 

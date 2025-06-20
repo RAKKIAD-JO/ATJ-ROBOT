@@ -52,8 +52,8 @@ export default function Home() {
           throw new Error(data.message || "Registration failed");
         }
 
-        alert("Register success ✅");
-        setStep("login"); // เปลี่ยนกลับไป login หลังสมัครเสร็จ
+        alert("ลงทะเบียนสำเร็จ กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ");
+        setStep("login"); 
 
       } catch (error) {
         if (error instanceof Error) {
