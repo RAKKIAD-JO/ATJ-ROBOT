@@ -371,6 +371,7 @@ router.get('/sensor-data/:robot_id/latest10', authenticateToken, async (req, res
 router.get("/all-robot", authenticateToken, async (req, res) => {
   console.log("req.userId:", req.userId);
   console.log("req.isAdmin:", req.isAdmin);
+
   try {
     if (!req.isAdmin) {
       return res.status(403).json({ success: false, message: "Admin access required" });
@@ -378,68 +379,52 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
 
     const pgClient = await db.connect();
     try {
-      const query = `
+      // 1. ดึงข้อมูล robots จาก PostgreSQL
+      const pgQuery = `
         SELECT r.id, r.user_id, r.robot_name, r.device_id, r.token,
                u.email, u.first_name, u.last_name
         FROM robots r
         LEFT JOIN users u ON r.user_id = u.id
-        ORDER BY r.id DESC
       `;
-      const result = await pgClient.query(query);
+      const pgResult = await pgClient.query(pgQuery);
+      const pgRobots = pgResult.rows;
 
-      const iotBaseUrl = 'http://iot-server:3000';
+      // 🔁 สร้าง Map ของ robots จาก PostgreSQL โดยใช้ device_id เป็น key
+      const pgRobotMap = {};
+      pgRobots.forEach(robot => {
+        pgRobotMap[robot.device_id] = robot;
+      });
 
-      const robotsWithStatus = await Promise.all(
-        result.rows.map(async (robot) => {
-           try {
-            // ดึงข้อมูล sensor ล่าสุดจาก iot-server
-            const sensorRes = await fetch(`${iotBaseUrl}/api/sensor-data/${robot.device_id}`);
-            const sensorJson = await sensorRes.json();
+      // 2. ดึงข้อมูลสถานะทั้งหมดจาก IoT Server
+      const iotRes = await fetch('http://iot-server:3000/api/esp32-status');
+      const iotJson = await iotRes.json();
 
-            const isOnline = sensorJson?.data?.timestamp
-              ? new Date() - new Date(sensorJson.data.timestamp) < 300000
-              : false;
+      if (!iotJson.success || !Array.isArray(iotJson.data)) {
+        return res.status(500).json({ success: false, message: "ไม่สามารถดึงข้อมูลจาก IoT Server ได้" });
+      }
 
-            return {
-              id: robot.id,
-              user_id: robot.user_id,
-              robot_name: robot.robot_name,
-              device_id: robot.device_id,
-              token: robot.token,
-              email: robot.email || null,
-              firstName: robot.first_name || null,
-              lastName: robot.last_name || null,
-              status: isOnline ? 'online' : 'offline',
-              isOnline,
-              last_update: sensorJson?.data?.timestamp || null,
-              hasSensorData: !!sensorJson?.data,
-              latestSensorTime: sensorJson?.data?.timestamp || null,
-              battery: sensorJson?.data?.battery ?? null,
-              sprayRate: sensorJson?.data?.sprayRate ?? null,
-              waterLevel: sensorJson?.data?.waterLevel ?? null,
-              pumpStatus: sensorJson?.data?.pumpStatus ?? null,
-            };
-          } catch (err) {
-            console.error(`Fetch failed for robot ${robot.device_id}:`, err);
-            return {
-              id: robot.id,
-              user_id: robot.user_id,
-              robot_name: robot.robot_name,
-              device_id: robot.device_id,
-              token: robot.token,
-              email: robot.email,
-              firstName: robot.first_name,
-              lastName: robot.last_name,
-              status: 'error',
-              isOnline: false,
-              last_update: null,
-              hasSensorData: false,
-              latestSensorTime: null,
-              error: 'เชื่อมต่อ iot-server ไม่ได้',
-            };
-          }
-        })
-      );
+      const now = new Date();
+
+      // 3. รวมข้อมูลจากทั้งสองแหล่ง
+      const robotsWithStatus = iotJson.data.map((status) => {
+        const robot = pgRobotMap[status.device_id];
+        const lastUpdate = status?.last_update ? new Date(status.last_update) : null;
+        const isOnline = lastUpdate ? (now - lastUpdate < 300000) : false;
+
+        return {
+          id: robot?.id || null,
+          user_id: robot?.user_id || null,
+          robot_name: robot?.robot_name || null,
+          device_id: status.device_id,
+          token: robot?.token || null,
+          email: robot?.email || null,
+          firstName: robot?.first_name || null,
+          lastName: robot?.last_name || null,
+          isOnline,
+          last_update: status?.last_update || null,
+          ...status, // ข้อมูลจาก IoT เช่น battery, sprayRate, waterLevel, pumpStatus, etc.
+        };
+      });
 
       res.json({ success: true, robots: robotsWithStatus });
     } finally {
@@ -450,6 +435,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) => {
   const { robot_id } = req.params;

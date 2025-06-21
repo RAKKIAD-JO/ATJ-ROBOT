@@ -78,7 +78,7 @@ app.use(bodyParser.json());
 // API input
 app.post('/api/esp32-status', async (req, res) => {
   const { device_id, token, status } = req.body;
-  console.log('Received Data:', req.body); // แสดงข้อมูลที่รับมา
+  console.log('Received Data:', req.body); 
 
   if (!device_id || !token) {
     return res.status(400).json({ success: false, message: 'Device ID and Token are required.' });
@@ -90,7 +90,6 @@ app.post('/api/esp32-status', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid Token.' });
     }
 
-    // อัปเดตสถานะอุปกรณ์
     device.status = status;
     device.last_update = new Date();
     await device.save();
@@ -111,10 +110,9 @@ app.post('/api/generate-token', async (req, res) => {
   if (!device_id) {
     return res.status(400).json({ success: false, message: 'Device ID is required.' });
   }
-
+  
   try {
-    const token = require('crypto').randomBytes(16).toString('hex'); // Generate random token
-
+    const token = require('crypto').randomBytes(16).toString('hex');
     const result = await Status.findOneAndUpdate(
       { device_id },
       {
@@ -126,11 +124,10 @@ app.post('/api/generate-token', async (req, res) => {
 
     console.log('Database Update Result:', result);
 
-    // ส่ง response พร้อมทั้ง token และ status
     res.json({
       success: true,
       token,
-      status: result.status, // ค่า status ที่ MongoDB ส่งกลับมา
+      status: result.status,
     });
   } catch (err) {
     console.error('Error generating token:', err);
@@ -470,6 +467,19 @@ app.get('/api/esp32-data/:device_id', async (req, res) => {
   } catch (err) {
     console.error("❌ เกิดข้อผิดพลาด:", err.message);
     return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+  }
+});
+
+app.get('/api/esp32-status', async (req, res) => {
+  try {
+    const statuses = await Status.find().lean();
+    res.json({
+      success: true,
+      data: statuses
+    });
+  } catch (err) {
+    console.error("❌ Error fetching ESP32 statuses:", err.message);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 
