@@ -52,21 +52,20 @@ export default function SettingsPage() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // ✅ ตรวจสอบ MIME type
+    
       if (!file.type.startsWith("image/")) {
         alert("กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น");
         return;
       }
 
-      // ✅ ตรวจสอบนามสกุล
       const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
       if (!allowedExtensions.includes(fileExtension || "")) {
         alert("รองรับเฉพาะไฟล์: .jpg, .jpeg, .png, .gif, .webp");
         return;
       }
-      if (file.size > 1024 * 1024) {
-        alert("ไฟล์ใหญ่เกิน 1MB");
+      if (file.size > 2 * (1024 * 1024)) {
+        alert("ไฟล์ใหญ่เกิน 2MB");
         return;
       }
       const reader = new FileReader();

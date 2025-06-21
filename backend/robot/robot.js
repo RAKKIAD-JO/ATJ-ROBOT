@@ -382,7 +382,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
       // 1. ดึงข้อมูล robots จาก PostgreSQL
       const pgQuery = `
         SELECT r.id, r.user_id, r.robot_name, r.device_id, r.token,
-               u.email, u.first_name, u.last_name
+               u.email, u.phone, u.first_name, u.last_name
         FROM robots r
         LEFT JOIN users u ON r.user_id = u.id
       `;
@@ -414,6 +414,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
         return {
           id: robot?.id || null,
           user_id: robot?.user_id || null,
+          phone: robot?.phone || null,
           robot_name: robot?.robot_name || null,
           device_id: status.device_id,
           token: robot?.token || null,

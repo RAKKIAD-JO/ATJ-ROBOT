@@ -13,6 +13,7 @@ interface Robot {
     firstName?: string;
     lastName?: string;
     email?: string;
+    phone?: number;
 }
 
 export default function AdminPage() {
@@ -163,11 +164,11 @@ export default function AdminPage() {
                     filteredRobots.map((robot) => (
                         <div className={`robot-card ${robot.status}`} key={robot.device_id}>
                             <h3>{robot.device_id}</h3>
-                            <p><strong>ชื่อ:</strong> {robot.firstName ? `${robot.firstName} ${robot.lastName || ''}` : 'ไม่มีชื่อ'}</p>
-                            <p><strong>อีเมล:</strong> {robot.email || 'ไม่มีอีเมล'}</p>
-                            <p>
-                                <strong>สถานะ:</strong> {robot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
-                            </p>
+                            <p><strong>ชื่อ:</strong> {robot.firstName ? `${robot.firstName} ${robot.lastName || ''}` : 'ไม่มีเจ้าข้อง'}</p>
+                            <p><strong>อีเมล:</strong> {robot.email || 'ไม่มีเจ้าข้อง'}</p>
+                            <p><strong>เบอร์โทร:</strong> {robot.phone || 'ไม่มีเจ้าข้อง'}</p>
+                            <p><strong>สถานะ:</strong> {robot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}</p>
+                            <p><strong>Token:</strong> {robot.token}</p>
                             <button onClick={() => handleSelectRobot(robot)}>ดูการทำงาน</button>
                         </div>
                     ))

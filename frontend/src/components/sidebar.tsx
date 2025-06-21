@@ -209,7 +209,8 @@ export default function Sidebar() {
                         <h3>ตั้งค่า</h3>
                     </Link>
 
-                    <div className="robots-section">
+                    {!user?.isAdmin && (
+                        <div className="robots-section">
                         <div className="robots-toggle" onClick={toggleRobots}>
                             <div className="robots-title">
                                 <span className="material-symbols-outlined">smart_toy</span>
@@ -245,6 +246,8 @@ export default function Sidebar() {
                             </div>
                         )}
                     </div>
+                    )}
+                    
 
                     <div className="sidebar-footer">
                         <div className="user-profile">
