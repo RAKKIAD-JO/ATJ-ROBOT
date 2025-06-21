@@ -1,14 +1,13 @@
-"use client"; // ใช้ client-side rendering
+"use client"; 
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import "@/styles/login.css";
 
 export default function Home() {
-  const router = useRouter(); // ใช้สำหรับเปลี่ยนหน้า
-  const [step, setStep] = useState<"login" | "register">("login"); // login/register toggle
+  const router = useRouter(); 
+  const [step, setStep] = useState<"login" | "register">("login"); 
   const [error, setError] = useState('');
-  // เก็บข้อมูลของฟอร์ม
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -17,15 +16,13 @@ export default function Home() {
     passWord: '',
   });
 
-  const [confirmPassword, setConfirmPassword] = useState(''); // สำหรับ confirm password
+  const [confirmPassword, setConfirmPassword] = useState(''); 
 
-  // เมื่อกรอก input ใด ๆ
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // เมื่อกดปุ่ม Login/Register
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -63,9 +60,8 @@ export default function Home() {
         }
       }
     } else {
-      // เชื่อม API Login จริง
       try {
-        const response = await fetch('/api/users/login', {
+        const res = await fetch('/api/users/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -76,18 +72,24 @@ export default function Home() {
           }),
         });
 
-        const data = await response.json();
+        const data = await res.json();
+        const userWithName = {
+          ...data.user,
+          name: `${data.user.firstName} ${data.user.lastName}` 
+        };
         
-        if (response.ok) {
-          // เพิ่ม console.log เพื่อดูค่า token
-          console.log("Login successful, token:", data.token);
-          window.location.href = "/home";
+        if (res.ok) {
+          if(userWithName.isAdmin) {
+            window.location.href = "/admin";
+          } else {
+             window.location.href = "/home";
+          }
         } else {
           setError(data.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
         }
       } catch (error) {
         console.error('Login error:', error);
-        setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
       }
     }
   };
