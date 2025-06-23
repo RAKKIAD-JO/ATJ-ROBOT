@@ -37,7 +37,6 @@ export default function Graph() {
     setEndDate(e.target.value);
   };
 
-  // ข้อมูลสำหรับ PieChart ของ @mui/x-charts
   const pieData = [
     { id: 0, value: 1000, label: "น้ำ" },
     { id: 1, value: 500, label: "ปุ๋ย" },

@@ -159,7 +159,7 @@ app.post('/api/esp32-data', async (req, res) => {
 // API Sensor
 app.post('/api/esp32-sensor', authenticateDevice, async (req, res) => {
   const { device_id, battery, pumpStatus, sprayRate, waterLevel ,timestamp } = req.body;
-  const thaiTimestamp = new Date(new Date(timestamp).getTime() + 7 * 60 * 60 * 1000);
+  //const thaiTimestamp = new Date(new Date(timestamp).getTime() + 7 * 60 * 60 * 1000);
   // ตรวจสอบข้อมูล
   if (!device_id || battery == null || pumpStatus == null || sprayRate == null || waterLevel == null || !timestamp) {
     return res.status(400).send('Missing required fields!');
@@ -173,7 +173,7 @@ app.post('/api/esp32-sensor', authenticateDevice, async (req, res) => {
       pumpStatus,
       sprayRate,
       waterLevel,
-      timestamp: thaiTimestamp 
+      timestamp: new Date(timestamp)
     });
 
     await newSensorData.save();
