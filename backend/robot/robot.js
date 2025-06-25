@@ -114,7 +114,6 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
   try {
     const pgClient = await db.connect();
     try {
-      // ดึงข้อมูลหุ่นยนต์จาก PostgreSQL
       const query = `
         SELECT id, robot_name, token, device_id 
         FROM robots 
@@ -128,14 +127,10 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
           robots: [] 
         });
       }
-
-      // เตรียมข้อมูลสำหรับเรียก API
       const devices = result.rows.map(robot => ({
         device_id: robot.device_id,
         token: robot.token
       }));
-
-      // เรียก API เพื่อดึงสถานะทั้งหมดพร้อมกัน
       try {
         const statusResponse = await axios.post(`${API_SERVER_URL}/devices-status`, 
           { devices },
@@ -143,7 +138,6 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
         );
 
         if (statusResponse.data.success) {
-          // รวมข้อมูลจาก PostgreSQL และ API
           const robotsWithStatus = result.rows.map(robot => {
             const statusData = statusResponse.data.data.find(
               item => item.device_id === robot.device_id
@@ -163,7 +157,6 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
             robots: robotsWithStatus 
           });
         } else {
-          // ถ้า API ไม่สำเร็จ ให้ส่งข้อมูลพื้นฐาน
           const robotsWithBasicData = result.rows.map(robot => ({
             ...robot,
             isOnline: false,

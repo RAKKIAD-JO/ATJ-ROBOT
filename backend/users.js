@@ -3,11 +3,11 @@ const router = express.Router();
 const pool = require("./postgres");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
-const jwt = require("jsonwebtoken"); // ติดตั้ง jsonwebtoken ก่อน: npm install jsonwebtoken
+const jwt = require("jsonwebtoken"); 
 const authenticateToken = require('./middleware/auth');
 const multer = require('multer');
 const path = require('path');
-const axios = require("axios"); // เพิ่มบนสุดถ้ายังไม่มี
+const axios = require("axios");
 const fs = require('fs');
 const util = require('util');
 const unlinkAsync = util.promisify(fs.unlink);
@@ -17,7 +17,7 @@ const crypto = require('crypto');
 // ตั้งค่า storage สำหรับ multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, 'uploads/profile_Image')); // เปลี่ยนตรงนี้
+    cb(null, path.join(__dirname, 'uploads/profile_Image')); 
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname);
@@ -83,7 +83,7 @@ router.post("/register", async (req, res) => {
           กรุณาคลิกลิงก์ด้านล่างเพื่อยืนยันอีเมลของคุณ:
         </p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="http://localhost:5000/api/users/verify-email?email=${email}&token=${token}"
+          <a href="https://www.atj-robots.online/api/users/verify-email?email=${email}&token=${token}"
              style="display: inline-block; padding: 14px 28px; background-color: #17a2b8; color: white; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 50px; transition: background 0.3s;">
             ยืนยันอีเมล
           </a>

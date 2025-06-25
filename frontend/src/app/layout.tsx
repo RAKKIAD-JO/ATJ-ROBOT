@@ -9,6 +9,12 @@ const kanit = Kanit({
   variable: "--font-kanit"
 })
 
+export const metadata = {
+  title: 'ATJ Robot - หุ่นยนต์ฉีดพ่นเพื่อการเกษตร',
+  description: 'ลดการสัมผัสสารเคมีโดยตรง ช่วยลดความเสี่ยงต่อสุขภาพของเกษตรกร',
+  icons: '/logomine1.png'
+}
+
 export default function RootLayout({
   children,
 }: {
