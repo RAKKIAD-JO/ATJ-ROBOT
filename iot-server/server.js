@@ -36,7 +36,7 @@ const authenticateDevice = async (req, res, next) => {
     if (!device) {
       return res.status(403).send('Invalid token or device ID!');
     }
-    next(); // อุปกรณ์ถูกต้อง ให้ดำเนินการต่อ
+    next(); 
   } catch (err) {
     console.error('Authentication error:', err);
     res.status(500).send('Server error!');
@@ -146,8 +146,16 @@ app.post('/api/esp32-data', async (req, res) => {
 
   try {
       // Save data to MongoDB
-      const newData = new Esp32Data({ device_id, plantType, liquidType, chemicalName, area, other: other || ''});
-      
+      const newData = new Esp32Data({ 
+        device_id, 
+        plantType, 
+        liquidType, 
+        chemicalName, 
+        area, 
+        other: other || '',
+        timestamp: new Date(),
+      });
+
       await newData.save();
       res.status(200).send('Data saved successfully!');
   } catch (err) {
@@ -346,7 +354,7 @@ app.get("/api/sensor-data/:device_id", async (req, res) => {
 
 // 4. ดึงข้อมูลสถานะหลายอุปกรณ์พร้อมกัน
 app.post("/api/devices-status", async (req, res) => {
-  const { devices } = req.body; // [{ device_id, token }, ...]
+  const { devices } = req.body; 
   
   console.log(`🔍 Checking status for ${devices?.length || 0} devices`);
   
