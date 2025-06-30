@@ -1,39 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../postgres"); // ปรับตามโครงสร้างจริง
+const db = require("../postgres"); 
 const axios = require("axios");
 const authenticateToken = require('../middleware/auth');
 require('dotenv').config();
 
-// Config for API Server
 const API_SERVER_URL = process.env.IOT_SERVER_URL;
-
-// Helper function to call API with timeout
-const callAPI = async (url, options = {}) => {
-  const method = options.method || 'GET';
-  const timeout = options.timeout || 10000;
-  const data = options.data || null;
-
-  try {
-    const axiosConfig = {
-      method,
-      url,
-      timeout,
-      data,
-    };
-
-    const response = await Promise.race([
-      axios(axiosConfig),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API call timeout')), timeout)
-      )
-    ]);
-    return response;
-  } catch (error) {
-    console.error("Connect robot error:", error.message);
-    throw error;
-  }
-};
 
 router.post("/connect-robot", authenticateToken, async (req, res) => {
   const userId = req.userId;
@@ -213,7 +185,7 @@ router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
   try {
     const pgClient = await db.connect();
     try {
-      // ตรวจสอบความเป็นเจ้าของหุ่นยนต์
+
       console.log('🔍 Checking robot ownership...');
 
       const robotQuery = isAdmin
@@ -313,7 +285,6 @@ router.get('/sensor-data/:robot_id/latest10', authenticateToken, async (req, res
   try {
     const pgClient = await db.connect();
     try {
-      // ตรวจสอบความเป็นเจ้าของหุ่นยนต์
       const robotQuery = isAdmin
         ? `SELECT device_id, token FROM robots WHERE id = $1`
         : `SELECT device_id, token FROM robots WHERE id = $1 AND user_id = $2`;
@@ -372,7 +343,6 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
 
     const pgClient = await db.connect();
     try {
-      // 1. ดึงข้อมูล robots จาก PostgreSQL
       const pgQuery = `
         SELECT r.id, r.user_id, r.robot_name, r.device_id, r.token,
                u.email, u.phone, u.first_name, u.last_name
@@ -382,23 +352,20 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
       const pgResult = await pgClient.query(pgQuery);
       const pgRobots = pgResult.rows;
 
-      // 🔁 สร้าง Map ของ robots จาก PostgreSQL โดยใช้ device_id เป็น key
       const pgRobotMap = {};
       pgRobots.forEach(robot => {
         pgRobotMap[robot.device_id] = robot;
       });
 
-      // 2. ดึงข้อมูลสถานะทั้งหมดจาก IoT Server
-      const iotRes = await fetch('http://iot-server:3000/api/esp32-status');
-      const iotJson = await iotRes.json();
+      const apiUrl = 'http://iot-server:3000/api/esp32-status';
+      const iotRes = await axios.get(apiUrl);
+      const iotJson = iotRes.data;
 
       if (!iotJson.success || !Array.isArray(iotJson.data)) {
         return res.status(500).json({ success: false, message: "ไม่สามารถดึงข้อมูลจาก IoT Server ได้" });
       }
 
       const now = new Date();
-
-      // 3. รวมข้อมูลจากทั้งสองแหล่ง
       const robotsWithStatus = iotJson.data.map((status) => {
         const robot = pgRobotMap[status.device_id];
         const lastUpdate = status?.last_update ? new Date(status.last_update) : null;
@@ -416,7 +383,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
           lastName: robot?.last_name || null,
           isOnline,
           last_update: status?.last_update || null,
-          ...status, // ข้อมูลจาก IoT เช่น battery, sprayRate, waterLevel, pumpStatus, etc.
+          ...status,
         };
       });
 
@@ -430,7 +397,6 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
   }
 });
 
-
 router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) => {
   const { robot_id } = req.params;
   const user_id = req.userId;
@@ -442,9 +408,7 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
 
   try {
     const pgClient = await db.connect();
-
     try {
-      // ดึง device_id และ token จาก PostgreSQL
       const query = isAdmin
         ? `SELECT device_id, token FROM robots WHERE id = $1`
         : `SELECT device_id, token FROM robots WHERE id = $1 AND user_id = $2`;
@@ -462,7 +426,6 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
         return res.status(400).json({ error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
       }
 
-      // เรียก API ที่ Mongo (iot-server)
       const apiUrl = `http://iot-server:3000/api/esp32-data/${device_id}`;
       const response = await axios.get(apiUrl, {
         headers: {
@@ -471,9 +434,22 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
         timeout: 10000
       });
 
+      const rawData = response.data.data;
+      if (rawData.timestamp) {
+        rawData.timestamp = new Date(rawData.timestamp).toLocaleString('th-TH', {
+          timeZone: 'Asia/Bangkok',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+      }
+
       return res.json({
         success: true,
-        data: response.data.data
+        data: rawData
       });
 
     } finally {

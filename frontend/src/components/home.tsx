@@ -212,7 +212,7 @@ export default function Home() {
                     <p>ชื่อสารเคมี : {dataType?.chemicalName}</p>
                     <p>ปริมาณการใช้สารเคมี : {dataType?.chemicalAmount}</p>
                     <p>พื้นที่ : {dataType?.area}</p>
-                    <p>ระยะเวลา : {dataType?.timestamp}</p>
+                    <p>ระยะเวลาที่เริ่ม : {dataType?.timestamp}</p>
                   </div>
                 </div>
               </div>
