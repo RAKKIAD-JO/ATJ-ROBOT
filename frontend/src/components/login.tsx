@@ -68,28 +68,38 @@ export default function Home() {
           },
           body: JSON.stringify({
             email: formData.email,
-            passWord: formData.passWord,
+            passWord: formData.passWord
           }),
+          credentials: 'include'
         });
 
         const data = await res.json();
+
+        if (!res.ok) {
+          console.error("Login failed:", data.message);
+          setError(data.message || "เข้าสู่ระบบไม่สำเร็จ");
+          return;
+        }
+
+        if (!data.user || !data.user.firstName || !data.user.lastName) {
+          setError("ข้อมูลผู้ใช้ไม่สมบูรณ์");
+          return;
+        }
+        
         const userWithName = {
           ...data.user,
           name: `${data.user.firstName} ${data.user.lastName}` 
         };
         
-        if (res.ok) {
-          if(userWithName.isAdmin) {
-            window.location.href = "/admin";
-          } else {
-             window.location.href = "/home";
-          }
+        if(userWithName.isAdmin) {
+          window.location.href = "/admin";
         } else {
-          setError(data.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+            window.location.href = "/home";
         }
+
       } catch (error) {
-        console.error('Login error:', error);
-        setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+        console.error("Errorlogin:", error);
+        setError('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
       }
     }
   };

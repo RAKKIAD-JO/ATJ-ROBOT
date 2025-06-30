@@ -129,9 +129,7 @@ router.post("/login", async (req, res) => {
 
     const user = userResult.rows[0];
     if (!user.is_verified) {
-      return res
-        .status(403)
-        .json({ message: "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" });
+      return res.status(403).json({ message: "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" });
     }
     const isMatch = await bcrypt.compare(passWord, user.password);
 
