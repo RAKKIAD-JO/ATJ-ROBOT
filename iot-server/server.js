@@ -28,6 +28,7 @@ const authenticateDevice = async (req, res, next) => {
   const { device_id, token } = req.headers;
 
   if (!device_id || !token) {
+    console.log("❌ Missing headers");
     return res.status(401).send('Authentication required!');
   }
 
@@ -60,12 +61,23 @@ const esp32DataSchema = new mongoose.Schema({
 
 const esp32SensorSchema = new mongoose.Schema({
   device_id: { type: String, required: true },
-  battery: { type: String, required: true },
+  battery: { type: Number, required: true },
   pumpStatus: { type: String, required: true },
-  sprayRate: { type: String, required: true },
-  waterLevel: { type: String, required: true },
+  sprayRate: { type: Number, required: true },
+  waterLevel: { type: Number, required: true },
+  liquidType: { type: String, required: false },
   timestamp: { type: Date, default: Date.now },
 });
+
+function normalizeLiquidType(tupe) {
+  if (!tupe) return 'unknown';
+  const trimmedType = tupe.trim().toLowerCase();
+  if (trimmedType === 'น้ำ') return 'water';
+  if (trimmedType === 'ปุ๋ย') return 'fertilizer';
+  if (trimmedType === 'สารเคมี') return 'pesticide';
+  if (trimmedType === 'ยาฆ่าแมลง') return 'insecticide';
+  return 'unknown';
+}
 
 const Status = mongoose.model('Status', statusSchema);
 const Esp32Data = mongoose.model('Esp32Data', esp32DataSchema);
@@ -75,7 +87,7 @@ app.use(express.json());
 app.use(bodyParser.json());
 
 
-// API input
+// API input status from ESP32
 app.post('/api/esp32-status', async (req, res) => {
   const { device_id, token, status } = req.body;
   console.log('Received Data:', req.body); 
@@ -136,16 +148,12 @@ app.post('/api/generate-token', async (req, res) => {
 });
 
 // API Endpoint to receive data from ESP32
-app.post('/api/esp32-data', async (req, res) => {
+app.post('/api/esp32-data', authenticateDevice, async (req, res) => {
   const { device_id, plantType, liquidType, chemicalName, area, other} = req.body;
-
-  // Validate input
   if (!device_id || !plantType || !liquidType || !chemicalName || !area) {
       return res.status(400).send('Missing required fields!');
   }
-
   try {
-      // Save data to MongoDB
       const newData = new Esp32Data({ 
         device_id, 
         plantType, 
@@ -166,21 +174,18 @@ app.post('/api/esp32-data', async (req, res) => {
 
 // API Sensor
 app.post('/api/esp32-sensor', authenticateDevice, async (req, res) => {
-  const { device_id, battery, pumpStatus, sprayRate, waterLevel ,timestamp } = req.body;
-  //const thaiTimestamp = new Date(new Date(timestamp).getTime() + 7 * 60 * 60 * 1000);
-  // ตรวจสอบข้อมูล
+  const { device_id, battery, pumpStatus, sprayRate, waterLevel ,timestamp, liquidType } = req.body;
   if (!device_id || battery == null || pumpStatus == null || sprayRate == null || waterLevel == null || !timestamp) {
     return res.status(400).send('Missing required fields!');
   }
-
   try {
-    // บันทึกข้อมูลใน MongoDB
     const newSensorData = new Esp32Sensor({
       device_id,
       battery,
       pumpStatus,
       sprayRate,
       waterLevel,
+      liquidType: normalizeLiquidType(liquidType),
       timestamp: new Date(timestamp)
     });
 
@@ -192,7 +197,7 @@ app.post('/api/esp32-sensor', authenticateDevice, async (req, res) => {
   }
 });
 
-// 1. ดึงข้อมูลอุปกรณ์จาก token
+// ดึงข้อมูลอุปกรณ์จาก token
 app.get("/api/device/:token", async (req, res) => {
   const { token } = req.params;
   
@@ -234,7 +239,7 @@ app.get("/api/device/:token", async (req, res) => {
   }
 });
 
-// 2. ดึงสถานะอุปกรณ์
+// ดึงสถานะอุปกรณ์
 app.get("/api/device-status/:device_id/:token", async (req, res) => {
   const { device_id, token } = req.params;
   
@@ -290,7 +295,7 @@ app.get("/api/device-status/:device_id/:token", async (req, res) => {
   }
 });
 
-// 3. ดึงข้อมูล sensor
+// ดึงข้อมูล sensor
 app.get("/api/sensor-data/:device_id", async (req, res) => {
   const { device_id } = req.params;
   
@@ -352,7 +357,7 @@ app.get("/api/sensor-data/:device_id", async (req, res) => {
   }
 });
 
-// 4. ดึงข้อมูลสถานะหลายอุปกรณ์พร้อมกัน
+// ดึงข้อมูลสถานะหลายอุปกรณ์พร้อมกัน
 app.post("/api/devices-status", async (req, res) => {
   const { devices } = req.body; 
   
@@ -413,17 +418,6 @@ app.post("/api/devices-status", async (req, res) => {
       message: "Server error" 
     });
   }
-});
-
-// 5. Health check
-app.get("/api/health", (req, res) => {
-  const mongoStatus = checkMongoConnection();
-  
-  res.json({
-    status: "OK",
-    mongodb: mongoStatus ? "connected" : "disconnected",
-    timestamp: new Date().toISOString()
-  });
 });
 
 // GET /api/sensor-data/:device_id/latest10
@@ -503,8 +497,9 @@ app.use((err, req, res, next) => {
 
 
 // การปรับ เป็น offline
+const timemin = 2; // ระยะเวลา Timeout (นาที)
 const CHECK_INTERVAL = 60000; // เช็คทุก 10 วินาที
-const TIMEOUT_LIMIT = 2 * 10000; // ระยะเวลา Timeout (2 นาที)
+const TIMEOUT_LIMIT = timemin * 10000; 
 
 setInterval(async () => {
   const now = new Date();
@@ -513,8 +508,6 @@ setInterval(async () => {
       { last_update: { $lt: new Date(now - TIMEOUT_LIMIT) }, status: "online" },
       { $set: { status: "offline" } }
     );
-
-    // ตรวจสอบเฉพาะเมื่อมีการเปลี่ยนแปลง
     if (result.modifiedCount > 0) {
       console.log(`Updated ${result.modifiedCount} devices to offline.`);
     }
