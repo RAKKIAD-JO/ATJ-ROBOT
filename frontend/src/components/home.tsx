@@ -75,7 +75,7 @@ export default function Home() {
         }
       };
 
-      // โหลดข้อมูลชนิดพืช/ของเหลว ฯลฯ
+      // โหลดข้อมูลการฉีดพ่น
       const loadDataType = async () => {
         setLoadingDataType(true);
         setError(null);
@@ -108,7 +108,7 @@ export default function Home() {
         <h1>Dashboard</h1>
 
         {!selectedRobot ? (
-          <p>โปรดเลือกหุ่นยนต์ของคุณ</p>
+          <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
         ) : loadingSensor ? (
           <p>กำลังโหลดข้อมูล...</p>
         ) : loadingDataType ? (

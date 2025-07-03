@@ -1,70 +1,69 @@
 "use client";
-import React, { useState } from 'react';
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from 'react';
 import '@/styles/history.css';
 import {
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
-    MenuItem,
     Button,
     TextField,
     Pagination,
 } from '@mui/material';
 import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
 
-const dummyData = [
-    {
-        id: 1,
-        date: '2023-10-01',
-        plantType: 'ผักสวนครัว',
-        category: 'สารเคมี',
-        chemicalName: 'ออร์กาโนฟอสเฟต',
-        area: '1',
-        volume: '5',
-        duration: '40',
-        note: 'โรงเรือนที่1',
-    },
-];
-
-type HistoryItem = {
+interface HistoryItem {
     id: number;
     date: string;
     plantType: string;
     category: string;
     chemicalName: string;
-    area: string;
-    volume: string;
+    area: number;
+    volume: number;
     duration: string;
     note: string;
-};
+}
+
+type EditableHistoryItem = Partial<HistoryItem & { id: number }>;
 
 export default function HistoryPage() {
-    const router = useRouter();
-    const [data, setData] = useState<HistoryItem[]>(dummyData);
-    const [editItem, setEditItem] = useState<HistoryItem | null>(null);
+    const [data, setData] = useState<HistoryItem[]>([]);
+    const [editItem, setEditItem] = useState<EditableHistoryItem | null>(null);
     const [filter, setFilter] = useState("ทั้งหมด");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const { selectedRobot } = useSelectedRobot();
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
-    // เช็ค session
-    React.useEffect(() => {
-        fetch("/api/users/profile", {
-            credentials: "include"
-        })
-        .then(res => {
-            if (res.status === 401 || res.status === 403) {
-                router.replace("/");
-                return;
+    // ดึงข้อมูลจาก API เมื่อเลือก robot หรือช่วงวันที่เปลี่ยน
+    useEffect(() => {
+        if (!selectedRobot || !startDate || !endDate) return;
+
+        const fetchData = async () => {
+            try {
+                const res = await fetch(
+                `http://localhost:5000/devices/chemical-usage-history?device_id=${selectedRobot.device_id}&startDate=${startDate}&endDate=${endDate}`,
+                {
+                    headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
+                );
+                const json: HistoryItem[] = await res.json();
+                const withId: HistoryItem[] = json.map((item, index): HistoryItem => ({
+                    ...item,
+                    id: index + 1
+                }));
+                setData(withId);
+                setCurrentPage(1);
+            } catch (error) {
+                console.error("โหลดข้อมูลล้มเหลว:", error);
             }
-            return res.json();
-        })
-        .catch(() => {
-            router.replace("/");
-        });
-    }, [router]);
+        };
+
+        fetchData();
+    }, [selectedRobot, startDate, endDate]);
 
     const filteredData = data.filter((row) => {
         const matchType = filter === "ทั้งหมด" || row.category === filter;
@@ -73,6 +72,11 @@ export default function HistoryPage() {
         const matchEnd = !endDate || rowDate <= new Date(endDate);
         return matchType && matchStart && matchEnd;
     });
+
+    const paginatedData = filteredData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     const handleSave = () => {
         if (!editItem) return;
@@ -83,9 +87,33 @@ export default function HistoryPage() {
         setEditItem(null);
     };
 
+    const downloadCSV = () => {
+        const headers = [
+            "วันที่", "ชนิดพืช", "ประเภทของเหลว", "ชื่อสารเคมี",
+            "พื้นที่ (ไร่)", "ปริมาณ (ลิตร)", "ระยะเวลา", "หมายเหตุ"
+        ];
+        const rows = filteredData.map(row => [
+            row.date, row.plantType, row.category, row.chemicalName,
+            row.area, row.volume, row.duration, row.note
+        ]);
+
+        const csvContent = [
+            "\uFEFF",
+            [headers, ...rows].map(r => r.join(",")).join("\n")
+        ].join("");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", "chemical_usage_history.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <main className="main-history">
-            <h2 className="title">ประวัติการทำงาน</h2>
+            <h2 className="title-history">ประวัติการทำงาน</h2>
             {selectedRobot ? (
                 <div className="selected-robot-info">
                     <p>หุ่นยนต์ที่เลือก: {selectedRobot.robot_name}</p>
@@ -93,20 +121,6 @@ export default function HistoryPage() {
             ) : (
                 <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
             )}
-            <h3 className="subtitle">ประวัติการใช้งานทั้งหมด: {filteredData.length} รายการ</h3>
-
-            <div className="filter-section">
-                {["ทั้งหมด", "สารเคมี", "ปุ๋ย", "น้ำ"].map((type) => (
-                    <button
-                        key={type}
-                        className={`filter-tab ${filter === type ? "active" : ""}`}
-                        onClick={() => setFilter(type)}
-
-                    >
-                        {type}
-                    </button>
-                ))}
-            </div>
 
             <div className="filter-section-date">
                 <div className="filter-date">
@@ -128,6 +142,28 @@ export default function HistoryPage() {
                     />
                 </div>
             </div>
+
+            <h3 className="subtitle">ประวัติที่แสดง: {filteredData.length} รายการ</h3>
+
+            <div className="filter-section">
+                {["ทั้งหมด", "สารเคมี", "ปุ๋ย", "น้ำ"].map((type) => (
+                    <button
+                        key={type}
+                        className={`filter-tab ${filter === type ? "active" : ""}`}
+                        onClick={() => {
+                            setFilter(type);
+                            setCurrentPage(1);
+                        }}
+                    >
+                        {type}
+                    </button>
+                ))}
+                <button className="btn-download-csv" onClick={downloadCSV}>
+                    ดาวน์โหลด CSV
+                </button>
+
+            </div>
+
             <div className="table-wrapper">
                 <table className="data-table">
                     <thead>
@@ -144,7 +180,7 @@ export default function HistoryPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredData.map((row) => (
+                        {paginatedData.map((row) => (
                             <tr key={row.id}>
                                 <td>{row.date}</td>
                                 <td>{row.plantType}</td>
@@ -165,9 +201,16 @@ export default function HistoryPage() {
                 </table>
             </div>
 
-            <div className="pagination-container">
-                <Pagination count={1} page={1} />
-            </div>
+            {filteredData.length > itemsPerPage && (
+                <div className="pagination-container">
+                    <Pagination
+                        count={Math.ceil(filteredData.length / itemsPerPage)}
+                        page={currentPage}
+                        onChange={(e, page) => setCurrentPage(page)}
+                        color="primary"
+                    />
+                </div>
+            )}
 
             <Dialog className="edit-dialog" open={!!editItem} onClose={() => setEditItem(null)}>
                 <DialogTitle>แก้ไขข้อมูล</DialogTitle>
@@ -177,33 +220,25 @@ export default function HistoryPage() {
                         type="date"
                         value={editItem?.date || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, date: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, date: e.target.value }))
                         }
                         fullWidth
                         margin="dense"
-                        InputLabelProps={{ shrink: true }}
                     />
                     <TextField
                         label="ชนิดพืช"
-                        select
                         value={editItem?.plantType || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, plantType: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, plantType: e.target.value }))
                         }
                         fullWidth
                         margin="dense"
-                    >
-                        {["ผักสวนครัว", "ไม้พุ่มเตี้ย", "ไม้เลื้อย"].map((type) => (
-                            <MenuItem key={type} value={type}>
-                                {type}
-                            </MenuItem>
-                        ))}
-                    </TextField>
+                    />
                     <TextField
                         label="ประเภทของเหลว"
                         value={editItem?.category || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, date: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, category: e.target.value }))
                         }
                         fullWidth
                         margin="dense"
@@ -212,7 +247,7 @@ export default function HistoryPage() {
                         label="ชื่อสารเคมี"
                         value={editItem?.chemicalName || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, chemicalName: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, chemicalName: e.target.value }))
                         }
                         fullWidth
                         margin="dense"
@@ -222,7 +257,7 @@ export default function HistoryPage() {
                         type="number"
                         value={editItem?.area || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, area: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, area: Number(e.target.value) }))
                         }
                         fullWidth
                         margin="dense"
@@ -232,7 +267,7 @@ export default function HistoryPage() {
                         type="number"
                         value={editItem?.volume || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, volume: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, volume: Number(e.target.value) }))
                         }
                         fullWidth
                         margin="dense"
@@ -241,7 +276,7 @@ export default function HistoryPage() {
                         label="ระยะเวลา"
                         value={editItem?.duration || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, duration: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, duration: e.target.value }))
                         }
                         fullWidth
                         margin="dense"
@@ -250,7 +285,7 @@ export default function HistoryPage() {
                         label="หมายเหตุ"
                         value={editItem?.note || ""}
                         onChange={(e) =>
-                            setEditItem((prev) => prev ? ({ ...prev, note: e.target.value }): prev)
+                            setEditItem((prev) => ({ ...prev, note: e.target.value }))
                         }
                         fullWidth
                         margin="dense"
@@ -258,9 +293,7 @@ export default function HistoryPage() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setEditItem(null)}>ยกเลิก</Button>
-                    <Button variant="contained" onClick={handleSave}>
-                        บันทึก
-                    </Button>
+                    <Button variant="contained" onClick={handleSave}>บันทึก</Button>
                 </DialogActions>
             </Dialog>
         </main>

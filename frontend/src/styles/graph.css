@@ -45,7 +45,7 @@ main .graph-select {
 .line-graph-chart {
     display: flex;
     justify-content: center;
-    max-width: 80%;
+    max-width: 90%;
     width: 900px;
     height: 230px;
     border-radius: 1.4rem;
@@ -58,8 +58,8 @@ main .graph-select {
 .bar-graph-chart {
     display: flex;
     justify-content: center;
-    max-width: 80%;
-    width: 800px;
+    max-width: 90%;
+    width: 900px;
     height: 230px;
     border-radius: 1.4rem;
     margin-bottom: 1.8rem;
@@ -78,7 +78,7 @@ main .graph-select {
 
 .graph-right-panel {
     width: 300px;
-    margin-top: 1.4rem;
+    margin-top: 3rem;
 }
 
 
@@ -180,4 +180,3 @@ section .chemical-hazardous-item span {
     margin-bottom: 0.5rem;
     color: #333;
 }
-

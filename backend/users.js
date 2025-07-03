@@ -325,9 +325,7 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
   let profileImagePath = req.file ? `/uploads/profile_Image/${req.file.filename}` : undefined;
 
   try {
-    // ถ้ามีไฟล์ใหม่ ให้ลบไฟล์เดิมก่อน
     if (req.file) {
-      // ดึง path รูปเดิมจากฐานข้อมูล
       const oldImg = await pool.query(
         `SELECT profile_image FROM users WHERE id = $1`,
         [userId]
@@ -335,7 +333,6 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
       const oldPath = oldImg.rows[0]?.profile_image;
       if (oldPath && oldPath.startsWith('/uploads/profile_Image/')) {
         const fullPath = path.join(__dirname, oldPath);
-        // ลบไฟล์เดิม (ถ้ามี)
         if (fs.existsSync(fullPath)) {
           await unlinkAsync(fullPath);
         }

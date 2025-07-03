@@ -22,6 +22,8 @@ export default function AdminPage() {
     const [searchRobot, setSearchRobot] = useState('');
     const [robots, setRobots] = useState<Robot[]>([]);
     const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
+    const { setSelectedRobot } = useSelectedRobot();
+    const router = useRouter();
 
     const handleGenerateToken = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,9 +88,7 @@ export default function AdminPage() {
 
         return statusMatches && searchMatch;
     });
-
-    const { setSelectedRobot } = useSelectedRobot();
-    const router = useRouter();
+    
     const handleSelectRobot = (robot: Robot) => {
         setSelectedRobot({
             id: robot.id,

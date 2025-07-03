@@ -17,8 +17,8 @@ router.post("/connect-robot", authenticateToken, async (req, res) => {
 
   try {
     // ตรวจสอบ token กับ API Server และดึง device_id
-    const response = await axios.get(`http://iot-server:3000/api/device/${token}`);
-    
+    const response = await axios.get(`${API_SERVER_URL}/api/device/${token}`);
+
     if (!response.data.success || !response.data.data) {
       return res.status(404).json({ success: false, message: "token ไม่พบในระบบ" });
     }
@@ -146,7 +146,6 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
       } catch (apiError) {
         console.error('API call failed:', apiError.message);
         
-        // ถ้า API Server ไม่พร้อม ให้ส่งข้อมูลพื้นฐาน
         const robotsWithBasicData = result.rows.map(robot => ({
           ...robot,
           isOnline: false,
@@ -212,8 +211,8 @@ router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
         // เรียก API เพื่อดึงสถานะอุปกรณ์
         console.log('🔍 Fetching device status...');
         const [statusResponse, sensorResponse] = await Promise.all([
-          axios.get(`http://iot-server:3000/api/device-status/${device_id}/${token}`),
-          axios.get(`http://iot-server:3000/api/sensor-data/${device_id}`)
+          axios.get(`${API_SERVER_URL}/api/device-status/${device_id}/${token}`),
+          axios.get(`${API_SERVER_URL}/api/sensor-data/${device_id}`)
         ]);
 
         // ตรวจสอบการตอบกลับจาก API
@@ -302,7 +301,7 @@ router.get('/sensor-data/:robot_id/latest10', authenticateToken, async (req, res
       if (!device_id || !token) {
         return res.status(400).json({ error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
       }
-      const apiUrl = `http://iot-server:3000/api/sensor-data/${device_id}/latest10`;
+      const apiUrl = `${API_SERVER_URL}/api/sensor-data/${device_id}/latest10`;
 
       const response = await axios.get(apiUrl, {
         headers: {
@@ -357,7 +356,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
         pgRobotMap[robot.device_id] = robot;
       });
 
-      const apiUrl = 'http://iot-server:3000/api/esp32-status';
+      const apiUrl = `${API_SERVER_URL}/api/esp32-status`;
       const iotRes = await axios.get(apiUrl);
       const iotJson = iotRes.data;
 
@@ -426,8 +425,7 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
         return res.status(400).json({ error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
       }
 
-      const apiUrl = `http://iot-server:3000/api/esp32-data/${device_id}`;
-      const response = await axios.get(apiUrl, {
+      const response = await axios.get(`${API_SERVER_URL}/api/esp32-data/${device_id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
@@ -438,13 +436,13 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
       if (rawData.timestamp) {
         rawData.timestamp = new Date(rawData.timestamp).toLocaleString('th-TH', {
           timeZone: 'Asia/Bangkok',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
-        });
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        }).replace(/(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}:\d{2}:\d{2})/, '$4 วันที่ $1/$2/$3');
       }
 
       return res.json({
@@ -467,6 +465,126 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
     }
 
     return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+  }
+});
+
+router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
+  const { device_id, startDate, endDate, groupBy = 'day' } = req.query;
+  const userId = req.userId;
+  const isAdmin = req.isAdmin;
+
+  if (!device_id || !startDate || !endDate) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  function formatDate(date) {
+    const d = new Date(date);
+    if (groupBy === 'month') {
+      return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
+    } else if (groupBy === 'week') {
+      const onejan = new Date(d.getFullYear(), 0, 1);
+      const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+      return `${d.getFullYear()}-W${week.toString().padStart(2,'0')}`;
+    } else {
+      return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+    }
+  }
+
+  const typeMapping = {
+    'น้ำ': 'water',
+    'ปุ๋ย': 'fertilizer',
+    'สารเคมี': 'pesticide',
+  };
+
+  try {
+    const pgClient = await db.connect();
+    try {
+      const robotQuery = isAdmin
+        ? `SELECT device_id FROM robots WHERE device_id = $1`
+        : `SELECT device_id FROM robots WHERE device_id = $1 AND user_id = $2`;
+
+      const robotResult = isAdmin
+        ? await pgClient.query(robotQuery, [device_id])
+        : await pgClient.query(robotQuery, [device_id, userId]);
+
+      if (robotResult.rows.length === 0) {
+        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+      }
+    } finally {
+      pgClient.release();
+    }
+
+    // ✅ MongoDB API
+    const mongoRes = await axios.get(`${API_SERVER_URL}/mongodb/spray-logs`, {
+      params: { device_id, startDate, endDate }
+    });
+
+    const dataLogs = mongoRes.data.data;
+    const counts = {};
+    const allTypes = ['water', 'fertilizer', 'pesticide'];
+
+    dataLogs.forEach(log => {
+      const dateKey = formatDate(log.timestamp);
+      if (!counts[dateKey]) counts[dateKey] = { water: 0, fertilizer: 0, pesticide: 0 };
+
+      const typeRaw = log.liquidType || 'unknown';
+      const type = typeMapping[typeRaw.toLowerCase()] || 'unknown';
+
+      if (allTypes.includes(type)) {
+        counts[dateKey][type] += 1;
+      }
+    });
+
+    const responseData = Object.entries(counts).map(([date, counts]) => ({
+      date,
+      water: counts.water,
+      fertilizer: counts.fertilizer,
+      pesticide: counts.pesticide,
+    }));
+
+    res.json({ success: true, data: responseData });
+  } catch (err) {
+    console.error("Error in PostgreSQL API:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// /chemical-usage-by-type (Proxy API)
+router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
+  const { device_id, startDate, endDate } = req.query;
+  const userId = req.userId;
+  const isAdmin = req.isAdmin;
+
+  if (!device_id || !startDate || !endDate) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const pgClient = await db.connect();
+    try {
+      const robotQuery = isAdmin
+        ? `SELECT device_id FROM robots WHERE device_id = $1`
+        : `SELECT device_id FROM robots WHERE device_id = $1 AND user_id = $2`;
+
+      const robotResult = isAdmin
+        ? await pgClient.query(robotQuery, [device_id])
+        : await pgClient.query(robotQuery, [device_id, userId]);
+
+      if (robotResult.rows.length === 0) {
+        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+      }
+    } finally {
+      pgClient.release();
+    }
+
+    const mongoRes = await axios.get(`${API_SERVER_URL}/mongodb/chemical-usage-by-type`, {
+      params: { device_id, startDate, endDate }
+    });
+
+    res.json(mongoRes.data);
+  } catch (err) {
+    console.error("Error in Proxy API:", err);
+    res.status(500).json({ error: "Proxy server error" });
   }
 });
 

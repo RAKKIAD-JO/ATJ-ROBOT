@@ -2,14 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-
-
 const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017/esp32_db'; 
 
 const app = express();
 const port = 3000;
 
-// MongoDB Connection
 mongoose.connect(mongoUrl, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -28,7 +25,7 @@ const authenticateDevice = async (req, res, next) => {
   const { device_id, token } = req.headers;
 
   if (!device_id || !token) {
-    console.log("❌ Missing headers");
+    console.log("Missing headers");
     return res.status(401).send('Authentication required!');
   }
 
@@ -44,7 +41,6 @@ const authenticateDevice = async (req, res, next) => {
   }
 };
 
-// Helper function to check MongoDB connection
 const checkMongoConnection = () => {
   return mongoose.connection.readyState === 1;
 };
@@ -456,7 +452,7 @@ app.get('/api/esp32-data/:device_id', async (req, res) => {
   try {
     const latestData = await Esp32Data.findOne({ device_id })
       .sort({ timestamp: -1 }) // ดึงข้อมูลล่าสุด
-      .select('device_id plantType liquidType chemicalName area other timestamp'); // เลือกเฉพาะฟิลด์ที่ต้องการ
+      .select('device_id plantType liquidType chemicalName area other timestamp');
 
     if (!latestData) {
       return res.status(404).json({ error: "ไม่พบข้อมูล sensor ล่าสุด" });
@@ -485,21 +481,91 @@ app.get('/api/esp32-status', async (req, res) => {
   }
 });
 
+// ดึงข้อมูลการใช้งานสารเคมี
+app.get("/mongodb/spray-logs", async (req, res) => {
+  const { device_id, startDate, endDate } = req.query;
+  if (!device_id || !startDate || !endDate) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    success: false, 
-    message: "Internal server error" 
-  });
+  try {
+    const dataLogs = await Esp32Data.find({
+      device_id,
+      timestamp: { $gte: new Date(startDate), $lte: new Date(endDate) }
+    });
+
+    res.json({ success: true, data: dataLogs });
+  } catch (err) {
+    console.error("Error fetching MongoDB spray logs:", err);
+    res.status(500).json({ error: "MongoDB server error" });
+  }
 });
 
+// /mongodb/chemical-usage-by-type
+app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
+  const { device_id, startDate, endDate } = req.query;
+
+  if (!device_id || !startDate || !endDate) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const sensors = await Esp32Sensor.find({
+      device_id,
+      timestamp: { $gte: start, $lte: end },
+    }).sort({ timestamp: 1 });
+
+    const allTypes = ['water', 'fertilizer', 'pesticide'];
+    const usageByType = { water: 0, fertilizer: 0, pesticide: 0 };
+    const factor = 1;
+
+    if (sensors.length === 1) {
+      const single = sensors[0];
+      const liquidType = (single.liquidType || "unknown").toLowerCase();
+      if (allTypes.includes(liquidType)) {
+        usageByType[liquidType] += Number(single.sprayRate) * factor;
+      }
+    } else {
+      for (let i = 1; i < sensors.length; i++) {
+        const prev = sensors[i - 1];
+        const curr = sensors[i];
+        const durationSec = (curr.timestamp - prev.timestamp) / 1000;
+        const liquidType = (prev.liquidType || "unknown").toLowerCase();
+        if (allTypes.includes(liquidType)) {
+          usageByType[liquidType] += Number(prev.sprayRate) * (durationSec / 60) * factor;
+        }
+      }
+    }
+
+    for (const type of allTypes) {
+      usageByType[type] = parseFloat(usageByType[type].toFixed(2));
+    }
+
+    res.json({ success: true, data: usageByType, totalSensors: sensors.length });
+  } catch (err) {
+    console.error("MongoDB error:", err);
+    res.status(500).json({ error: "MongoDB server error" });
+  }
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Unhandled error:', error);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error"
+  });
+});
 
 // การปรับ เป็น offline
 const timemin = 2; // ระยะเวลา Timeout (นาที)
 const CHECK_INTERVAL = 60000; // เช็คทุก 10 วินาที
-const TIMEOUT_LIMIT = timemin * 10000; 
+const TIMEOUT_LIMIT = timemin * 10000;
 
 setInterval(async () => {
   const now = new Date();
@@ -511,8 +577,8 @@ setInterval(async () => {
     if (result.modifiedCount > 0) {
       console.log(`Updated ${result.modifiedCount} devices to offline.`);
     }
-  } catch (err) {
-    console.error('Error checking device statuses:', err);
+  } catch (error) {
+    console.error('Error checking device statuses:', error);
   }
 }, CHECK_INTERVAL);
 
