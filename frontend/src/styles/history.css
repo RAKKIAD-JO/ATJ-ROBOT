@@ -1,15 +1,11 @@
-
 .main-history {
-    width: 80%;
+    width: 90%;
     margin: 0 auto;
     gap: 1.8rem;
     margin-top: 1.4rem;
     margin-left: 15vw; 
-    padding: 2rem;
-
-}
-.title {
-  font-weight: bold;
+    padding: 3rem;
+    overflow-x: hidden;
 }
 
 .subtitle {
@@ -73,6 +69,24 @@
   box-shadow: 0 0 3px #17a2b8;
   outline: none;
 }
+
+.btn-download-csv {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  border: 1px solid #17a2b8; 
+  color: #17a2b8;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.btn-download-csv:hover {
+  background-color: #88b7b9; 
+  color: white;
+}
+
 
 .table-wrapper {
   overflow-x: auto;

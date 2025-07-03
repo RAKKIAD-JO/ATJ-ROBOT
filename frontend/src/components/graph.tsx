@@ -1,60 +1,154 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { PieChart } from '@mui/x-charts/PieChart';
+import React, { useState, useEffect} from "react";
+import { LineChart, BarChart } from "@mui/x-charts";
+import { PieChart } from "@mui/x-charts/PieChart";
 import "@/styles/graph.css";
 import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
+import { useRouter } from "next/navigation";
+
+type SprayCount = {
+  date: string;
+  water: number;
+  fertilizer: number;
+  pesticide: number;
+};
+
+type UsageByType = {
+  water: number;
+  fertilizer: number;
+  pesticide: number;
+};
+
+interface User {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  profileImage: string;
+  isAdmin: boolean;
+}
 
 export default function Graph() {
   const router = useRouter();
-  const [errorMessage, setErrorMessage] = useState("");
+  const { selectedRobot } = useSelectedRobot();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const {selectedRobot} = useSelectedRobot();
+  const [sprayCounts, setSprayCounts] = useState<SprayCount[]>([]);
+  const [usageByType, setUsageByType] = useState<UsageByType>({
+    water: 0,
+    fertilizer: 0,
+    pesticide: 0,
+  });
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/users/profile", {
-      credentials: "include"
-    })
-      .then(res => {
-        if (res.status === 403 || res.status === 401) {
-          setErrorMessage('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-          router.replace('/');
-          return;
+        fetch("/api/users/profile", {
+          method: "GET",
+          credentials: "include", 
+        })
+        .then(async (res) => {
+            if (res.status === 403 || res.status === 401) {
+                setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+                router.replace("/");
+                return;
+            }
+            const data = await res.json();
+            setUser(data);
+        })
+        .catch((err) => {
+            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + err.message);
+        });
+    }, [router]);
+
+  async function fetchSprayCounts() {
+    if (!selectedRobot || !startDate || !endDate) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/robot/spray-count-by-type?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}&groupBy=day`,
+        {
+          method: 'GET',
+          credentials: 'include',
         }
-        return res.json();
-      })
-      .catch((err) => {
-        setErrorMessage('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
-      });
-  }, [router]);
+      );
 
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(e.target.value);
-  };
+      const contentType = res.headers.get("content-type");
+      const text = await res.text();
 
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(e.target.value);
-  };
+      if (!res.ok || !contentType?.includes("application/json")) {
+        console.error("Invalid response:", text);
+        setSprayCounts([]);
+        return;
+      }
+
+      const data = JSON.parse(text);
+      if (data.success) setSprayCounts(data.data);
+      else setSprayCounts([]);
+    } catch (error) {
+      console.error("Failed to fetch spray counts:", error);
+      setSprayCounts([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchUsageByType() {
+    if (!selectedRobot || !startDate || !endDate) return;
+    try {
+      const res = await fetch(
+        `/robot/chemical-usage-by-type?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
+
+      const contentType = res.headers.get("content-type");
+      const text = await res.text();
+
+      if (!res.ok || !contentType?.includes("application/json")) {
+        console.error("Invalid response:", text);
+        setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
+        return;
+      }
+
+      const data = JSON.parse(text);
+      if (data.success) setUsageByType(data.data);
+      else setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
+    } catch (error) {
+      console.error("Failed to fetch usage by type:", error);
+      setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
+    }
+  }
+
+  useEffect(() => {
+    fetchSprayCounts();
+    fetchUsageByType();
+  }, [selectedRobot, startDate, endDate]);
+
+  const dates = sprayCounts.map((d) => d.date);
+  const waterSeries = sprayCounts.map((d) => d.water);
+  const fertilizerSeries = sprayCounts.map((d) => d.fertilizer);
+  const pesticideSeries = sprayCounts.map((d) => d.pesticide);
 
   const pieData = [
-    { id: 0, value: 1000, label: "น้ำ" },
-    { id: 1, value: 500, label: "ปุ๋ย" },
-    { id: 2, value: 200, label: "สารเคมีอันตราย" },
+    { id: 0, value: usageByType.water, label: "น้ำ" },
+    { id: 1, value: usageByType.fertilizer, label: "ปุ๋ย" },
+    { id: 2, value: usageByType.pesticide, label: "สารเคมี" },
   ];
 
   return (
     <main className="graph-dashboard">
-      {errorMessage && (
-        <div className="error-message" style={{ color: "red", marginBottom: 12 }}>
-          {errorMessage}
-        </div>
-      )}
       <section className="graph-left-panel">
         <h2 className="graph-title">ภาพรวมการใช้สารเคมี</h2>
         {selectedRobot ? (
           <div className="selected-robot-info">
-            <p>หุ่นยนต์ที่เลือก: {selectedRobot.robot_name}</p>
+            <p>หุ่นยนต์ที่เลือก:{" "}
+              {user?.isAdmin
+                ? selectedRobot.device_id
+                : selectedRobot.robot_name}
+            </p>
           </div>
         ) : (
           <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
@@ -66,39 +160,72 @@ export default function Graph() {
             type="date"
             className="graph-date-picker"
             value={startDate}
-            onChange={handleStartDateChange}
+            onChange={(e) => setStartDate(e.target.value)}
           />
           <label className="graph-label">เลือกวันที่สิ้นสุด:</label>
           <input
             type="date"
             className="graph-date-picker"
             value={endDate}
-            onChange={handleEndDateChange}
+            onChange={(e) => setEndDate(e.target.value)}
           />
         </div>
 
         <div className="graph-main-chart">
-          <div className="line-graph-chart">[กราฟเส้นสารเคมีทั้งหมด]</div>
-          <div className="bar-graph-chart">[กราฟแท่งสารเคมีทั้งหมด]</div>
+          <div className="line-graph-chart">
+            {loading ? (
+              "กำลังโหลดข้อมูล..."
+            ) : (
+              <LineChart
+                width={1000}
+                height={300}
+                series={[
+                  { data: waterSeries, label: "น้ำ" },
+                  { data: fertilizerSeries, label: "ปุ๋ย" },
+                  { data: pesticideSeries, label: "สารเคมี" },
+                ]}
+                xAxis={[{ scaleType: "point", data: dates }]}
+              />
+            )}
+          </div>
+          <div className="bar-graph-chart">
+            {loading ? (
+              "กำลังโหลดข้อมูล..."
+            ) : (
+              <BarChart
+                width={1000}
+                height={300}
+                series={[
+                  { data: waterSeries, label: "น้ำ" },
+                  { data: fertilizerSeries, label: "ปุ๋ย" },
+                  { data: pesticideSeries, label: "สารเคมี" },
+                ]}
+                xAxis={[{ scaleType: "band", data: dates }]}
+              />
+            )}
+          </div>
         </div>
       </section>
 
       <section className="graph-right-panel">
         <div className="graph-chemical-list">
           <div className="chemical-water-item">
-            <span className="chemical-water-icon">💧</span>
             <p className="chemical-water-text">น้ำ</p>
-            <p className="chemical-water-usage">1000 L</p>
+            <p className="chemical-water-usage">
+              {usageByType.water.toFixed(2)} L
+            </p>
           </div>
           <div className="chemical-fertilizer-item">
-            <span className="chemical-fertilizer-icon">🌱</span>
-            <p className="chemical-fertilizer-text">ปุ๋ย</p>
-            <p className="chemical-fertilizer-usage">500 kg</p>
+            <p className="chemical-fertilizer-text">ปุ๋ย</p>  
+            <p className="chemical-fertilizer-usage">
+              {usageByType.fertilizer.toFixed(2)}  L  
+            </p>
           </div>
           <div className="chemical-hazardous-item">
-            <span className="chemical-hazardous-icon">☠️</span>
-            <p className="chemical-hazardous-text">สารเคมีอันตราย</p>
-            <p className="chemical-hazardous-usage">200 L</p>
+            <p className="chemical-hazardous-text">สารเคมี</p>
+            <p className="chemical-hazardous-usage">
+              {usageByType.pesticide.toFixed(2)} L
+            </p>
           </div>
         </div>
         <div className="graph-detail-box">
@@ -115,11 +242,13 @@ export default function Graph() {
                 endAngle: 270,
               },
             ]}
-            width={200}
+            width={250}
             height={130}
           />
+          {errorMessage && <div className="error-message">{errorMessage}</div>}
         </div>
       </section>
     </main>
+    
   );
 }

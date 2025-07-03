@@ -82,6 +82,11 @@ export default function SettingsPage() {
       return;
     }
 
+    if (phone && phone.length !== 10) {
+      setErrorMessage('กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก');
+      return;
+    }
+
     try {
       const formData = new FormData();
 
@@ -120,7 +125,6 @@ export default function SettingsPage() {
 
       setErrorMessage('');
       alert('อัปเดตข้อมูลสำเร็จ');
-      // อัปเดตข้อมูลใหม่ (fetch profile ใหม่หรือ reload)
       window.location.reload();
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -192,8 +196,12 @@ export default function SettingsPage() {
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  if (value.length <= 10) setPhone(value);
+                }}
                 placeholder="เบอร์โทรศัพท์ของคุณ"
+                maxLength={10}
               />
             </div>
 
@@ -233,7 +241,7 @@ export default function SettingsPage() {
               </div>
               {errorMessage && <p className="error-message">{errorMessage}</p>}
             </div>
-            
+
             <div className="column">
               <label>Email</label>
               <input
@@ -245,7 +253,6 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-
           <button className="save-button" onClick={handleSaveChanges}>Save Changes</button>
         </div>
       </div>
