@@ -71,7 +71,6 @@ function normalizeLiquidType(tupe) {
   if (trimmedType === 'น้ำ') return 'water';
   if (trimmedType === 'ปุ๋ย') return 'fertilizer';
   if (trimmedType === 'สารเคมี') return 'pesticide';
-  if (trimmedType === 'ยาฆ่าแมลง') return 'insecticide';
   return 'unknown';
 }
 
@@ -97,11 +96,9 @@ app.post('/api/esp32-status', async (req, res) => {
     if (!device) {
       return res.status(401).json({ success: false, message: 'Invalid Token.' });
     }
-
     device.status = status;
     device.last_update = new Date();
     await device.save();
-
     console.log('Database Update Result:', device);
     res.json({ success: true, data: device });
   } catch (err) {
@@ -143,7 +140,7 @@ app.post('/api/generate-token', async (req, res) => {
   }
 });
 
-// API Endpoint to receive data from ESP32
+// API Data
 app.post('/api/esp32-data', authenticateDevice, async (req, res) => {
   const { device_id, plantType, liquidType, chemicalName, area, other} = req.body;
   if (!device_id || !plantType || !liquidType || !chemicalName || !area) {
@@ -520,33 +517,92 @@ app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
       timestamp: { $gte: start, $lte: end },
     }).sort({ timestamp: 1 });
 
-    const allTypes = ['water', 'fertilizer', 'pesticide'];
     const usageByType = { water: 0, fertilizer: 0, pesticide: 0 };
     const factor = 1;
+    const logs = [];
 
-    if (sensors.length === 1) {
-      const single = sensors[0];
-      const liquidType = (single.liquidType || "unknown").toLowerCase();
-      if (allTypes.includes(liquidType)) {
-        usageByType[liquidType] += Number(single.sprayRate) * factor;
-      }
-    } else {
-      for (let i = 1; i < sensors.length; i++) {
-        const prev = sensors[i - 1];
-        const curr = sensors[i];
-        const durationSec = (curr.timestamp - prev.timestamp) / 1000;
-        const liquidType = (prev.liquidType || "unknown").toLowerCase();
-        if (allTypes.includes(liquidType)) {
-          usageByType[liquidType] += Number(prev.sprayRate) * (durationSec / 60) * factor;
-        }
+    // แยก sensor ตามประเภทของ liquidType
+    const typeMap = {
+      water: [],
+      fertilizer: [],
+      pesticide: []
+    };
+
+    for (const sensor of sensors) {
+      const type = (sensor.liquidType || "").toLowerCase().trim();
+      if (typeMap[type]) {
+        typeMap[type].push(sensor);
       }
     }
 
-    for (const type of allTypes) {
+    // คำนวณแต่ละประเภทแยกกัน
+    for (const type in typeMap) {
+      const list = typeMap[type];
+
+      if (list.length === 1) {
+        const s = list[0];
+        const sprayRate = Number(s.sprayRate);
+        const added = sprayRate * factor;
+        usageByType[type] += added;
+
+        logs.push({
+          liquidType: type,
+          sprayRate,
+          duration: 60,
+          addedTo: type,
+          addedValue: added,
+          timestamp: s.timestamp,
+        });
+      }
+
+      if (list.length > 1) {
+        for (let i = 1; i < list.length; i++) {
+          const prev = list[i - 1];
+          const curr = list[i];
+          const sprayRate = Number(prev.sprayRate);
+          const durationSec = Math.min((curr.timestamp - prev.timestamp) / 1000, 60);
+          const added = sprayRate * (durationSec / 60) * factor;
+          usageByType[type] += added;
+
+          logs.push({
+            liquidType: type,
+            sprayRate,
+            duration: durationSec,
+            addedTo: type,
+            addedValue: parseFloat(added.toFixed(2)),
+            timestamp: prev.timestamp,
+          });
+        }
+
+        // ✅ เพิ่มตรงนี้: คิดค่าจากรายการสุดท้าย
+        const last = list[list.length - 1];
+        const sprayRate = Number(last.sprayRate);
+        const added = sprayRate * factor;
+
+        usageByType[type] += added;
+        logs.push({
+          liquidType: type,
+          sprayRate,
+          duration: 60,
+          addedTo: type,
+          addedValue: added,
+          timestamp: last.timestamp,
+          note: "last item, fallback 60s"
+        });
+      }
+    }
+
+    // ปัดเศษผลลัพธ์
+    for (const type in usageByType) {
       usageByType[type] = parseFloat(usageByType[type].toFixed(2));
     }
 
-    res.json({ success: true, data: usageByType, totalSensors: sensors.length });
+    res.json({
+      success: true,
+      data: usageByType,
+      totalSensors: sensors.length,
+      debugLogs: logs
+    });
   } catch (err) {
     console.error("MongoDB error:", err);
     res.status(500).json({ error: "MongoDB server error" });
