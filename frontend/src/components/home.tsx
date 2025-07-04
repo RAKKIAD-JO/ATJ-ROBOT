@@ -19,7 +19,7 @@ interface User {
 }
 
 export default function Home() {
-    const { selectedRobot, token } = useSelectedRobot();
+    const { selectedRobot } = useSelectedRobot();
     const router = useRouter();
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [sensorData, setSensorData] = useState<SensorDataType | null>(null);
@@ -96,7 +96,7 @@ export default function Home() {
 
       loadSensor();
       loadDataType();
-    }, [selectedRobot, token]);
+    }, [selectedRobot]);
 
   const batteryPercent = Number(sensorData?.battery) || 0;
   const flowRatePercent = Number(sensorData?.sprayRate) || 0;

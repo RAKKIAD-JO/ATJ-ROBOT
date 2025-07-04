@@ -142,7 +142,12 @@ export default function Graph() {
     <main className="graph-dashboard">
       <section className="graph-left-panel">
         <h2 className="graph-title">ภาพรวมการใช้สารเคมี</h2>
-        {selectedRobot ? (
+
+        {!selectedRobot ? (
+          <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
+        ) : loading ? (
+          <p>กำลังโหลดข้อมูล...</p>
+        ) : (
           <div className="selected-robot-info">
             <p>หุ่นยนต์ที่เลือก:{" "}
               {user?.isAdmin
@@ -150,8 +155,6 @@ export default function Graph() {
                 : selectedRobot.robot_name}
             </p>
           </div>
-        ) : (
-          <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
         )}
 
         <div className="graph-filters">

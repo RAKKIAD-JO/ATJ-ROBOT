@@ -525,7 +525,7 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
 
     dataLogs.forEach(log => {
       const dateKey = formatDate(log.timestamp);
-      if (!counts[dateKey]) counts[dateKey] = { water: 0, fertilizer: 0, pesticide: 0 };
+      if (!counts[dateKey]) counts[dateKey] = { water: 0, fertilizer: 0, pesticide: 0};
 
       const typeRaw = log.liquidType || 'unknown';
       const type = typeMapping[typeRaw.toLowerCase()] || 'unknown';
