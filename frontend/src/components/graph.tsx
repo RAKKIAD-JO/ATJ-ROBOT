@@ -5,6 +5,7 @@ import { PieChart } from "@mui/x-charts/PieChart";
 import "@/styles/graph.css";
 import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
 import { useRouter } from "next/navigation";
+import Loading from "@/components/loading";
 
 type SprayCount = {
   date: string;
@@ -41,7 +42,7 @@ export default function Graph() {
   });
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
         fetch("/api/users/profile", {
@@ -57,8 +58,8 @@ export default function Graph() {
             const data = await res.json();
             setUser(data);
         })
-        .catch((err) => {
-            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + err.message);
+        .catch((error) => {
+            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
         });
     }, [router]);
 
@@ -79,13 +80,16 @@ export default function Graph() {
       if (!res.ok || !contentType?.includes("application/json")) {
         console.error("Invalid response:", text);
         setSprayCounts([]);
-        return;
+        throw new Error("Failed to fetch robot data");
       }
 
       const data = JSON.parse(text);
       if (data.success) setSprayCounts(data.data);
       else setSprayCounts([]);
     } catch (error) {
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      }
       console.error("Failed to fetch spray counts:", error);
       setSprayCounts([]);
     } finally {
@@ -110,16 +114,20 @@ export default function Graph() {
       if (!res.ok || !contentType?.includes("application/json")) {
         console.error("Invalid response:", text);
         setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
-        return;
+        throw new Error("Failed to fetch robot data");
       }
 
       const data = JSON.parse(text);
       if (data.success) setUsageByType(data.data);
       else setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
     } catch (error) {
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      }
       console.error("Failed to fetch usage by type:", error);
       setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
     }
+    
   }
 
   useEffect(() => {
@@ -140,118 +148,115 @@ export default function Graph() {
 
   return (
     <main className="graph-dashboard">
-      <section className="graph-left-panel">
-        <h2 className="graph-title">ภาพรวมการใช้สารเคมี</h2>
-
-        {!selectedRobot ? (
-          <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
-        ) : loading ? (
-          <p>กำลังโหลดข้อมูล...</p>
-        ) : (
-          <div className="selected-robot-info">
-            <p>หุ่นยนต์ที่เลือก:{" "}
-              {user?.isAdmin
-                ? selectedRobot.device_id
-                : selectedRobot.robot_name}
-            </p>
-          </div>
-        )}
-
-        <div className="graph-filters">
-          <label className="graph-label">เลือกวันที่เริ่มต้น:</label>
-          <input
-            type="date"
-            className="graph-date-picker"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-          <label className="graph-label">เลือกวันที่สิ้นสุด:</label>
-          <input
-            type="date"
-            className="graph-date-picker"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
+      <section className="graph-dashboard-content">
+        <div className="graph-header">
+          <h2 className="graph-title">ภาพรวมการใช้สารเคมี</h2>
         </div>
+          {!selectedRobot ? (
+            <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
+          ) : loading ? (
+            <Loading />
+          ) : errorMessage ? (
+            <p style={{ color: "red" }}>{errorMessage}</p>
+          ) : (
+            <>
+            <div className="selected-robot-info">
+              <p>
+                หุ่นยนต์ที่เลือก:{" "}
+                {user?.isAdmin 
+                  ? selectedRobot.device_id 
+                  : selectedRobot.robot_name}
+              </p>
+            </div>
+            <div className="graph-main-content">
+              <section className="graph-left-panel">
+                <div className="graph-filters">
+                  <label className="graph-label">เลือกวันที่เริ่มต้น:</label>
+                  <input
+                    type="date"
+                    className="graph-date-picker"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                  <label className="graph-label">เลือกวันที่สิ้นสุด:</label>
+                  <input
+                    type="date"
+                    className="graph-date-picker"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
 
-        <div className="graph-main-chart">
-          <div className="line-graph-chart">
-            {loading ? (
-              "กำลังโหลดข้อมูล..."
-            ) : (
-              <LineChart
-                width={1000}
-                height={300}
-                series={[
-                  { data: waterSeries, label: "น้ำ" },
-                  { data: fertilizerSeries, label: "ปุ๋ย" },
-                  { data: pesticideSeries, label: "สารเคมี" },
-                ]}
-                xAxis={[{ scaleType: "point", data: dates }]}
-              />
+                <div className="graph-main-chart">
+                  <div className="line-graph-chart">
+                    <LineChart
+                      width={1000}
+                      height={300}
+                      series={[
+                        { data: waterSeries, label: "น้ำ" },
+                        { data: fertilizerSeries, label: "ปุ๋ย" },
+                        { data: pesticideSeries, label: "สารเคมี" },
+                      ]}
+                      xAxis={[{ scaleType: "point", data: dates }]}
+                    />
+                  </div>
+                  <div className="bar-graph-chart">
+                    <BarChart
+                      width={1000}
+                      height={300}
+                      series={[
+                        { data: waterSeries, label: "น้ำ" },
+                        { data: fertilizerSeries, label: "ปุ๋ย" },
+                        { data: pesticideSeries, label: "สารเคมี" },
+                      ]}
+                      xAxis={[{ scaleType: "band", data: dates }]}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="graph-right-panel">
+                <div className="graph-chemical-list">
+                  <div className="chemical-water-item">
+                    <p className="chemical-water-text">น้ำ</p>
+                    <p className="chemical-water-usage">{usageByType.water.toFixed(2)} L</p>
+                  </div>
+                  <div className="chemical-fertilizer-item">
+                    <p className="chemical-fertilizer-text">ปุ๋ย</p>
+                    <p className="chemical-fertilizer-usage">{usageByType.fertilizer.toFixed(2)} L</p>
+                  </div>
+                  <div className="chemical-hazardous-item">
+                    <p className="chemical-hazardous-text">สารเคมี</p>
+                    <p className="chemical-hazardous-usage">{usageByType.pesticide.toFixed(2)} L</p>
+                  </div>
+                </div>
+                <div className="graph-detail-box">
+                  <h3 className="graph-subtitle">ปริมาณการใช้ของเหลว</h3>
+                  {pieData.reduce((acc, d) => acc + d.value, 0) > 0 ? (
+                    <PieChart
+                      series={[
+                        {
+                          data: pieData,
+                          innerRadius: 30,
+                          outerRadius: 100,
+                          paddingAngle: 5,
+                          cornerRadius: 5,
+                          startAngle: -90,
+                          endAngle: 270,
+                        },
+                      ]}
+                      width={250}
+                      height={130}
+                    />
+                  ) : (
+                    <p>ไม่มีข้อมูลการใช้ของเหลว</p>
+                  )}
+                </div>
+              </section>
+            </div>
+            </>
             )}
-          </div>
-          <div className="bar-graph-chart">
-            {loading ? (
-              "กำลังโหลดข้อมูล..."
-            ) : (
-              <BarChart
-                width={1000}
-                height={300}
-                series={[
-                  { data: waterSeries, label: "น้ำ" },
-                  { data: fertilizerSeries, label: "ปุ๋ย" },
-                  { data: pesticideSeries, label: "สารเคมี" },
-                ]}
-                xAxis={[{ scaleType: "band", data: dates }]}
-              />
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="graph-right-panel">
-        <div className="graph-chemical-list">
-          <div className="chemical-water-item">
-            <p className="chemical-water-text">น้ำ</p>
-            <p className="chemical-water-usage">
-              {usageByType.water.toFixed(2)} L
-            </p>
-          </div>
-          <div className="chemical-fertilizer-item">
-            <p className="chemical-fertilizer-text">ปุ๋ย</p>  
-            <p className="chemical-fertilizer-usage">
-              {usageByType.fertilizer.toFixed(2)}  L  
-            </p>
-          </div>
-          <div className="chemical-hazardous-item">
-            <p className="chemical-hazardous-text">สารเคมี</p>
-            <p className="chemical-hazardous-usage">
-              {usageByType.pesticide.toFixed(2)} L
-            </p>
-          </div>
-        </div>
-        <div className="graph-detail-box">
-          <h3 className="graph-subtitle">ปริมาณการใช้ของเหลว</h3>
-          <PieChart
-            series={[
-              {
-                data: pieData,
-                innerRadius: 30,
-                outerRadius: 100,
-                paddingAngle: 5,
-                cornerRadius: 5,
-                startAngle: -90,
-                endAngle: 270,
-              },
-            ]}
-            width={250}
-            height={130}
-          />
-          {errorMessage && <div className="error-message">{errorMessage}</div>}
-        </div>
       </section>
     </main>
-    
   );
 }

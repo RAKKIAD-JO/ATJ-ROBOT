@@ -60,6 +60,7 @@ const esp32SensorSchema = new mongoose.Schema({
   battery: { type: Number, required: true },
   pumpStatus: { type: String, required: true },
   sprayRate: { type: Number, required: true },
+  flowRate: { type: Number, required: true, default: 0 },
   waterLevel: { type: Number, required: true },
   liquidType: { type: String, required: false },
   timestamp: { type: Date, default: Date.now },
@@ -142,8 +143,8 @@ app.post('/api/generate-token', async (req, res) => {
 
 // API Data
 app.post('/api/esp32-data', authenticateDevice, async (req, res) => {
-  const { device_id, plantType, liquidType, chemicalName, area, other} = req.body;
-  if (!device_id || !plantType || !liquidType || !chemicalName || !area) {
+  const { device_id, plantType, liquidType, chemicalName, area, other, timestamp} = req.body;
+  if (!device_id || !plantType || !liquidType || !chemicalName || !area || !timestamp) {
       return res.status(400).send('Missing required fields!');
   }
   try {
@@ -154,7 +155,7 @@ app.post('/api/esp32-data', authenticateDevice, async (req, res) => {
         chemicalName, 
         area, 
         other: other || '',
-        timestamp: new Date(),
+        timestamp: new Date(timestamp),
       });
 
       await newData.save();
@@ -167,8 +168,8 @@ app.post('/api/esp32-data', authenticateDevice, async (req, res) => {
 
 // API Sensor
 app.post('/api/esp32-sensor', authenticateDevice, async (req, res) => {
-  const { device_id, battery, pumpStatus, sprayRate, waterLevel ,timestamp, liquidType } = req.body;
-  if (!device_id || battery == null || pumpStatus == null || sprayRate == null || waterLevel == null || !timestamp) {
+  const { device_id, battery, pumpStatus, sprayRate, waterLevel ,timestamp, liquidType, flowRate } = req.body;
+  if (!device_id || battery == null || pumpStatus == null || sprayRate == null || waterLevel == null || !timestamp || flowRate == null) {
     return res.status(400).send('Missing required fields!');
   }
   try {
@@ -177,6 +178,7 @@ app.post('/api/esp32-sensor', authenticateDevice, async (req, res) => {
       battery,
       pumpStatus,
       sprayRate,
+      flowRate,
       waterLevel,
       liquidType: normalizeLiquidType(liquidType),
       timestamp: new Date(timestamp)
@@ -432,7 +434,7 @@ app.get('/api/sensor-data/:device_id/latest10', async (req, res) => {
       return res.status(404).json({ error: "ไม่พบข้อมูลเซ็นเซอร์สำหรับ device นี้" });
     }
 
-    return res.json(data.reverse()); // เรียงจากเก่าไปใหม่
+    return res.json(data.reverse()); 
   } catch (error) {
     console.error("❌ Error getting sensor data:", error.message);
     return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
@@ -491,6 +493,10 @@ app.get("/mongodb/spray-logs", async (req, res) => {
       timestamp: { $gte: new Date(startDate), $lte: new Date(endDate) }
     });
 
+    if (!dataLogs || dataLogs.length === 0){
+      return res.status(404).json({error : "NO Datas Spray-logs"})
+    }
+
     res.json({ success: true, data: dataLogs });
   } catch (err) {
     console.error("Error fetching MongoDB spray logs:", err);
@@ -517,11 +523,13 @@ app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
       timestamp: { $gte: start, $lte: end },
     }).sort({ timestamp: 1 });
 
+    if (!sensors || sensors.length === 0) {
+      return res.status(404).json({ error : "No Datas Sensors"})
+    }
+
     const usageByType = { water: 0, fertilizer: 0, pesticide: 0 };
     const factor = 1;
     const logs = [];
-
-    // แยก sensor ตามประเภทของ liquidType
     const typeMap = {
       water: [],
       fertilizer: [],
@@ -541,58 +549,28 @@ app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
 
       if (list.length === 1) {
         const s = list[0];
-        const sprayRate = Number(s.sprayRate);
-        const added = sprayRate * factor;
+        const flowRate = Number(s.flowRate);
+        const added = flowRate * factor;
         usageByType[type] += added;
-
-        logs.push({
-          liquidType: type,
-          sprayRate,
-          duration: 60,
-          addedTo: type,
-          addedValue: added,
-          timestamp: s.timestamp,
-        });
       }
 
       if (list.length > 1) {
         for (let i = 1; i < list.length; i++) {
           const prev = list[i - 1];
           const curr = list[i];
-          const sprayRate = Number(prev.sprayRate);
+          const flowRate = Number(prev.flowRate);
           const durationSec = Math.min((curr.timestamp - prev.timestamp) / 1000, 60);
-          const added = sprayRate * (durationSec / 60) * factor;
+          const added = flowRate * (durationSec / 60) * factor;
           usageByType[type] += added;
-
-          logs.push({
-            liquidType: type,
-            sprayRate,
-            duration: durationSec,
-            addedTo: type,
-            addedValue: parseFloat(added.toFixed(2)),
-            timestamp: prev.timestamp,
-          });
         }
 
-        // ✅ เพิ่มตรงนี้: คิดค่าจากรายการสุดท้าย
         const last = list[list.length - 1];
-        const sprayRate = Number(last.sprayRate);
-        const added = sprayRate * factor;
-
+        const flowRate = Number(last.flowRate);
+        const added = flowRate * factor;
         usageByType[type] += added;
-        logs.push({
-          liquidType: type,
-          sprayRate,
-          duration: 60,
-          addedTo: type,
-          addedValue: added,
-          timestamp: last.timestamp,
-          note: "last item, fallback 60s"
-        });
       }
     }
 
-    // ปัดเศษผลลัพธ์
     for (const type in usageByType) {
       usageByType[type] = parseFloat(usageByType[type].toFixed(2));
     }
@@ -601,7 +579,6 @@ app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
       success: true,
       data: usageByType,
       totalSensors: sensors.length,
-      debugLogs: logs
     });
   } catch (err) {
     console.error("MongoDB error:", err);
@@ -609,13 +586,112 @@ app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((error, req, res, next) => {
-  console.error('Unhandled error:', error);
-  res.status(500).json({
-    success: false,
-    message: "Internal server error"
-  });
+app.get("/mongodb/chemical-usage-history", async (req, res) => {
+  const { device_id, startDate, endDate } = req.query;
+
+  if (!device_id || !startDate || !endDate) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const DataLogs = await Esp32Data.find({
+      device_id,
+      timestamp: { $gte: start, $lte: end },
+    }).sort({ timestamp: 1 });
+
+    const SensorLogs = await Esp32Sensor.find({
+      device_id,
+      timestamp: { $gte: start, $lte: end },
+    }).sort({ timestamp: 1 });
+
+    if ((!DataLogs || DataLogs.length === 0) && (!SensorLogs || SensorLogs.length === 0)) {
+      return res.status(404).json({ error: "No data found for the specified device and date range" });
+    }
+
+    const groupedTime = {};
+    const groupedUsage = {};
+
+    for (const log of DataLogs) {
+      const logTime = new Date(log.timestamp);
+
+      // ใช้ช่วงเวลา ±15 นาที
+      const rangeStart = new Date(logTime.getTime() - 15 * 60 * 1000);
+      const rangeEnd = new Date(logTime.getTime() + 15 * 60 * 1000);
+
+      const sensorsInRange = SensorLogs.filter(sensor => {
+        const sensorTime = new Date(sensor.timestamp);
+        return sensorTime >= rangeStart && sensorTime <= rangeEnd;
+      });
+
+      let usageSec = 0;
+      let usageLiters = 0;
+
+      
+      for (let i = 1; i < sensorsInRange.length; i++) {
+        const prev = sensorsInRange[i - 1];
+        const curr = sensorsInRange[i];
+
+        if (!(prev.pumpStatus === "ON" && Number(prev.flowRate) > 0)) continue; 
+
+        const prevTime = new Date(prev.timestamp);
+        const currTime = new Date(curr.timestamp);
+
+        const durationSec = Math.min((currTime - prevTime) / 1000, 60);
+        if (durationSec <= 0 || durationSec >= 90) continue;
+
+        const durationMin = durationSec / 60;
+        const flowRate = Number(prev.flowRate) || 0;
+        const usedLiters = flowRate * durationMin;
+
+        usageSec += durationSec;
+        usageLiters += usedLiters;
+      }
+
+      const logDate = logTime.toISOString().split("T")[0];
+      if (!groupedTime[logDate]) groupedTime[logDate] = 0;
+      if (!groupedUsage[logDate]) groupedUsage[logDate] = 0;
+
+      groupedTime[logDate] += usageSec;
+      groupedUsage[logDate] += usageLiters;
+    }
+
+    for (const date in groupedTime) {
+      groupedTime[date] = parseFloat((groupedTime[date] / 60).toFixed(2));
+    }
+    for (const date in groupedUsage) {
+      groupedUsage[date] = parseFloat(groupedUsage[date].toFixed(2));
+    }
+
+    res.json({
+      success: true,
+      data: {
+        device_id,
+        usageHistory: DataLogs.map((log) => {
+          const logDate = new Date(log.timestamp).toISOString().split("T")[0];
+          return {
+            plantType: log.plantType,
+            liquidType: log.liquidType,
+            chemicalName: log.chemicalName,
+            area: log.area,
+            other: log.other || "",
+            timestamp: log.timestamp,
+            groupedTime: groupedTime[logDate] || 0,
+            groupedUsage: groupedUsage[logDate] || 0,
+          };
+        }),
+        groupedTime,
+        groupedUsage,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching MongoDB chemical usage history:", err);
+    return res.status(500).json({ error: "MongoDB server error" });
+  }
 });
 
 // การปรับ เป็น offline

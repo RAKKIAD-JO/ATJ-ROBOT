@@ -8,6 +8,7 @@ import 'animate.css';
 import SystemChart from "@/components/SystemChart";
 import { fetchSensorData , SensorDataType ,fetchRobotData ,Esp32DataType } from "../app/api/robot"; 
 import DonutChart from "@/components/donutChart";
+import Loading from "@/components/loading";
 
 interface User {
   firstName: string;
@@ -43,8 +44,8 @@ export default function Home() {
             const data = await res.json();
             setUser(data);
         })
-        .catch((err) => {
-            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + err.message);
+        .catch((error) => {
+            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
         });
     }, [router]);
 
@@ -63,9 +64,9 @@ export default function Home() {
           const data = await fetchSensorData(selectedRobot.id);
           setSensorData(data);
           
-        } catch (err: unknown) {
-          if (err instanceof Error) {
-            setError(err.message);
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
           } else {
             setError("เกิดข้อผิดพลาดในการโหลดข้อมูลเซ็นเซอร์");
           }
@@ -82,9 +83,9 @@ export default function Home() {
         try {
           const data = await fetchRobotData(selectedRobot.id);
           setDataType(data);
-        } catch (err: unknown) {
-          if (err instanceof Error) {
-            setError(err.message);
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
           } else {
             setError("เกิดข้อผิดพลาดในการโหลดข้อมูลชนิดพืช");
           }
@@ -106,13 +107,10 @@ export default function Home() {
     <main className='main-home'>
       <div className="dashboard">
         <h1>Dashboard</h1>
-
         {!selectedRobot ? (
           <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
-        ) : loadingSensor ? (
-          <p>กำลังโหลดข้อมูล...</p>
-        ) : loadingDataType ? (
-          <p>กำลังโหลดข้อมูล...</p>
+        ) : loadingSensor || loadingDataType ? (
+          <Loading /> 
         ) : error ? (
           <p style={{ color: 'red' }}>{error}</p>
         ) : !sensorData ? (
@@ -210,8 +208,9 @@ export default function Home() {
                     <p>ชนิดพืช : {dataType?.plantType}</p>
                     <p>ประเภทของของเหลว : {dataType?.liquidType}</p>
                     <p>ชื่อสารเคมี : {dataType?.chemicalName}</p>
-                    <p>ปริมาณการใช้สารเคมี : {dataType?.chemicalAmount}</p>
+                    {/*<p>ปริมาณการใช้สารเคมี : {dataType?.chemicalAmount}</p>*/}
                     <p>พื้นที่ : {dataType?.area}</p>
+                    <p>อื่นๆ : {dataType?.other || <span className="no-data">ไม่มีข้อมูล</span>}</p>
                     <p>ระยะเวลาที่เริ่ม : {dataType?.timestamp}</p>
                   </div>
                 </div>

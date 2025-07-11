@@ -429,21 +429,9 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
         headers: {
           Authorization: `Bearer ${token}`
         },
-        timeout: 10000
       });
 
       const rawData = response.data.data;
-      if (rawData.timestamp) {
-        rawData.timestamp = new Date(rawData.timestamp).toLocaleString('th-TH', {
-          timeZone: 'Asia/Bangkok',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        }).replace(/(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}:\d{2}:\d{2})/, '$4 วันที่ $1/$2/$3');
-      }
 
       return res.json({
         success: true,
@@ -514,7 +502,6 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
       pgClient.release();
     }
 
-    // ✅ MongoDB API
     const mongoRes = await axios.get(`${API_SERVER_URL}/mongodb/spray-logs`, {
       params: { device_id, startDate, endDate }
     });
@@ -543,8 +530,12 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
     }));
 
     res.json({ success: true, data: responseData });
-  } catch (err) {
-    console.error("Error in PostgreSQL API:", err);
+  } catch (error) {
+    if (error.response?.status === 404){
+      return res.status(404).json({error : "Failed to fetch robot data"})
+
+    }
+    console.error("Error in PostgreSQL API:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -582,9 +573,67 @@ router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
     });
 
     res.json(mongoRes.data);
-  } catch (err) {
-    console.error("Error in Proxy API:", err);
-    res.status(500).json({ error: "Proxy server error" });
+  } catch (error) {
+    if (error.response?.status === 404){
+      return res.status(404).json({ error: "Failed to fetch robot data" });
+    }
+    console.error("เกิดข้อผิดพลาด :", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาด" });
+  }
+});
+
+router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
+  const { device_id, startDate, endDate } = req.query;
+  const userId = req.userId;
+  const isAdmin = req.isAdmin;
+
+  if (!device_id || !startDate || !endDate) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const pgClient = await db.connect();
+    try {
+      const robotQuery = isAdmin
+        ? `SELECT device_id FROM robots WHERE device_id = $1`
+        : `SELECT device_id FROM robots WHERE device_id = $1 AND user_id = $2`;
+
+      const robotResult = isAdmin
+        ? await pgClient.query(robotQuery, [device_id])
+        : await pgClient.query(robotQuery, [device_id, userId]);
+
+      if (robotResult.rows.length === 0) {
+        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+      }
+    
+    } finally {
+      pgClient.release();
+    }
+
+    const HistoryData = await axios.get(`${API_SERVER_URL}/mongodb/chemical-usage-history`, {
+      params: { device_id, startDate, endDate }
+    });
+
+    const { usageHistory } = HistoryData.data.data;
+    res.json(
+      (usageHistory || []).map(log => ({
+        date: log.timestamp,
+        plantType: log.plantType,
+        category: log.liquidType,
+        chemicalName: log.chemicalName,
+        area: log.area,
+        volume: log.groupedUsage || 0,     
+        duration: log.groupedTime || 0,   
+        note: log.other || "",
+      }))
+    );
+    
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return res.status(404).json({ error: "Failed to fetch robot data" });
+    }
+    console.error("เกิดข้อผิดพลาดในการโหลดข้อมูล", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการโหลดข้อมูล" });
   }
 });
 

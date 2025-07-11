@@ -59,7 +59,7 @@ export const SelectedRobotProvider = ({ children }: { children: ReactNode }) => 
   );
 };
 
-// Hook สำหรับเรียกใช้ใน component
+
 export const useSelectedRobot = () => {
   const context = useContext(SelectedRobotContext);
   if (!context) {
