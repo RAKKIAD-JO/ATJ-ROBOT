@@ -529,7 +529,6 @@ app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
 
     const usageByType = { water: 0, fertilizer: 0, pesticide: 0 };
     const factor = 1;
-    const logs = [];
     const typeMap = {
       water: [],
       fertilizer: [],
@@ -543,31 +542,18 @@ app.get("/mongodb/chemical-usage-by-type", async (req, res) => {
       }
     }
 
-    // คำนวณแต่ละประเภทแยกกัน
     for (const type in typeMap) {
       const list = typeMap[type];
-
-      if (list.length === 1) {
-        const s = list[0];
-        const flowRate = Number(s.flowRate);
-        const added = flowRate * factor;
-        usageByType[type] += added;
-      }
-
       if (list.length > 1) {
         for (let i = 1; i < list.length; i++) {
           const prev = list[i - 1];
           const curr = list[i];
+          if (!(prev.pumpStatus === "ON" && Number(prev.flowRate) > 0)) continue
           const flowRate = Number(prev.flowRate);
           const durationSec = Math.min((curr.timestamp - prev.timestamp) / 1000, 60);
           const added = flowRate * (durationSec / 60) * factor;
           usageByType[type] += added;
         }
-
-        const last = list[list.length - 1];
-        const flowRate = Number(last.flowRate);
-        const added = flowRate * factor;
-        usageByType[type] += added;
       }
     }
 
