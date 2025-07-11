@@ -7,7 +7,6 @@ export type SensorDataType = {
   pumpStatus: boolean;
 };
 
-// type สำหรับข้อมูลล่าสุด 10 ค่า (มี timestamp)
 export type RawSensorData = {
   battery: number;
   sprayRate: number;
@@ -24,6 +23,20 @@ export type Esp32DataType = {
   other: string;
   timestamp: string;
 };
+
+function toThaiDatetimeString(dateStr: string) {
+    const date = new Date(dateStr);
+    return date.toLocaleString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Asia/Bangkok'
+    });
+}
+
 
 export async function fetchLatestSensorData(deviceId: string): Promise<RawSensorData[]> {
   const res = await fetch(`/robot/sensor-data/${deviceId}/latest10`, {
@@ -63,7 +76,13 @@ export async function fetchRobotData(robotId: number): Promise<Esp32DataType> {
     method: 'GET',
     credentials: 'include',
   });
+
   if (!res.ok) throw new Error('Failed to fetch robot data');
   const json = await res.json();
-  return json.data;
+  const data: Esp32DataType = {
+    ...json.data,
+    timestamp: toThaiDatetimeString(json.data.timestamp) 
+  };
+
+  return data;
 }

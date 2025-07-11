@@ -1,4 +1,4 @@
-.graph-dashboard {
+.graph-dashboard  {
     width: 80%;
     margin: 0 auto;
     display: grid;
@@ -6,8 +6,27 @@
     margin-top: 1.4rem;
     margin-left: 15vw;
     padding: 2rem;
-    /* overflow: hidden; */
+    /* overflow: hidden ; */
 }
+
+.graph-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.graph-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+}
+.graph-main-content {
+  display: flex;
+  flex-direction: row;
+}
+
 
 main .graph-date-picker {
     display: inline-block;
@@ -38,7 +57,7 @@ main .graph-select {
     width: 100%;
     padding: 0.7rem;
     border-radius: 2rem;
-    margin-top: 1.4rem;
+    margin-top: 0.3rem;
 
 }
 
@@ -46,7 +65,7 @@ main .graph-select {
     display: flex;
     justify-content: center;
     max-width: 90%;
-    width: 900px;
+    width: 850px;
     height: 230px;
     border-radius: 1.4rem;
     margin-bottom: 1.8rem;
@@ -59,7 +78,7 @@ main .graph-select {
     display: flex;
     justify-content: center;
     max-width: 90%;
-    width: 900px;
+    width: 850px;
     height: 230px;
     border-radius: 1.4rem;
     margin-bottom: 1.8rem;
@@ -78,7 +97,6 @@ main .graph-select {
 
 .graph-right-panel {
     width: 300px;
-    margin-top: 3rem;
 }
 
 
@@ -87,7 +105,7 @@ section .graph-title h2 {
 }
 
 section .graph-chemical-list {
-    margin-top: 5.5rem;
+    margin-top: 3.8rem;
     background-color: white;
     padding: 0.5rem;
     border-radius: 2rem;
