@@ -19,8 +19,8 @@ export type RobotType = {
 };
 
 export default function Sidebar() {
-    const robotPopupRef = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
+    const robotPopupRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [showRobots, setShowRobots] = useState(false);
@@ -159,6 +159,8 @@ export default function Sidebar() {
         window.dispatchEvent(new Event("userChanged"));
         window.location.href = "/";
     };
+
+    if (pathname === "/") return null;
 
     return (
         <div className="container">
