@@ -38,15 +38,15 @@ function toThaiDatetimeString(dateStr: string) {
 }
 
 
-export async function fetchLatestSensorData(deviceId: string): Promise<RawSensorData[]> {
-  const res = await fetch(`/robot/sensor-data/${deviceId}/latest10`, {
+export async function fetchLatestSensorData(robotId: string): Promise<RawSensorData[]> {
+  const res = await fetch(`/robot/sensor-data/${robotId}/latest10`, {
     method: 'GET',
     credentials: 'include',
   });
   if (!res.ok) {
     throw new Error("Failed to fetch sensor data");
   }
-  const data: RawSensorData[] = await res.json();
+  const data: RawSensorData[] = await res.json(); 
   return data;
 }
 

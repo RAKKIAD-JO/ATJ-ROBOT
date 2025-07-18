@@ -1,37 +1,27 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const bodyParser = require("body-parser");
 const app = express();
 const usersRouter = require("./users");
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const robotRoutes = require('./robot/robot');
+const swaggerUi = require('swagger-ui-express');
+const swaggerFile = require('./swagger-output.json');
 
-app.use(
-  cors({
-    origin: "http://localhost:4000", 
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE","PATCH"],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+const port = 5000;
 
-app.use(bodyParser.json());
 app.use(express.json()); 
 app.use(cookieParser());
-
-
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 app.use('/robot', robotRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/api/users", usersRouter);
 
 app.get("/", (req, res) => {
   res.send("Welcome to the API");
 });
 
-app.use("/api/users", usersRouter);
-const port = 5000;
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
-

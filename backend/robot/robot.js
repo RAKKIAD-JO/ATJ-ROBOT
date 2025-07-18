@@ -8,7 +8,7 @@ require('dotenv').config();
 const API_SERVER_URL = process.env.IOT_SERVER_URL;
 
 router.post("/connect-robot", authenticateToken, async (req, res) => {
-  const userId = req.userId;
+  const user_Id = req.userId;
   const { token, robot_name } = req.body;
 
   if (!token || !robot_name) {
@@ -16,37 +16,32 @@ router.post("/connect-robot", authenticateToken, async (req, res) => {
   }
 
   try {
-    // ตรวจสอบ token กับ API Server และดึง device_id
     const response = await axios.get(`${API_SERVER_URL}/api/device/${token}`);
 
-    if (!response.data.success || !response.data.data) {
+    if (!response.data.success) {
       return res.status(404).json({ success: false, message: "token ไม่พบในระบบ" });
     }
 
     const device_id = response.data.data.device_id;
-    if (!device_id) {
-      return res.status(400).json({ success: false, message: "ไม่พบ device_id" });
-    }
-
-    // ตรวจสอบว่า token นี้มีใน PostgreSQL แล้วหรือยัง
     const selectQuery = `SELECT * FROM robots WHERE token = $1`;
     const selectResult = await db.query(selectQuery, [token]);
 
     if (selectResult.rows.length === 0) {
-      // ยังไม่มี → แทรกใหม่
       const insertQuery = `
         INSERT INTO robots (user_id, token, robot_name, device_id)
         VALUES ($1, $2, $3, $4)
         RETURNING *
       `;
-      const insertResult = await db.query(insertQuery, [userId, token, robot_name, device_id]);
-      return res.json({ success: true, message: "เชื่อมต่อหุ่นยนต์สำเร็จ", user: insertResult.rows[0] });
+      const insertResult = await db.query(insertQuery, [user_Id, token, robot_name, device_id]);
+      return res.json({ 
+        success: true, 
+        message: "เชื่อมต่อหุ่นยนต์สำเร็จ", 
+        user: insertResult.rows[0] });
     } else {
-      // มีอยู่แล้ว → อัปเดตชื่อหรือ device_id ถ้ามีการเปลี่ยน
       const existing = selectResult.rows[0];
       if (
         existing.robot_name !== robot_name ||
-        existing.user_id !== userId ||
+        existing.user_id !== user_Id ||
         existing.device_id !== device_id
       ) {
         const updateQuery = `
@@ -55,7 +50,7 @@ router.post("/connect-robot", authenticateToken, async (req, res) => {
           WHERE token = $4
           RETURNING *
         `;
-        const updateResult = await db.query(updateQuery, [robot_name, userId, device_id, token]);
+        const updateResult = await db.query(updateQuery, [robot_name, user_Id, device_id, token]);
         return res.json({ success: true, message: "อัปเดตข้อมูลหุ่นยนต์สำเร็จ", user: updateResult.rows[0] });
       } else {
         return res.json({ success: true, message: "เชื่อมต่อสำเร็จ", user: existing });
@@ -87,7 +82,7 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
     const pgClient = await db.connect();
     try {
       const query = `
-        SELECT id, robot_name, token, device_id 
+        SELECT robots_id, robot_name, token, device_id 
         FROM robots 
         WHERE user_id = $1
       `;
@@ -105,8 +100,7 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
       }));
       try {
         const statusResponse = await axios.post(`${API_SERVER_URL}/devices-status`, 
-          { devices },
-          { timeout: 15000 }
+          { devices }
         );
 
         if (statusResponse.data.success) {
@@ -188,8 +182,8 @@ router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
       console.log('🔍 Checking robot ownership...');
 
       const robotQuery = isAdmin
-        ? `SELECT device_id, token FROM robots WHERE id = $1`
-        : `SELECT device_id, token FROM robots WHERE id = $1 AND user_id = $2`;
+        ? `SELECT device_id, token FROM robots WHERE robots_id = $1`
+        : `SELECT device_id, token FROM robots WHERE robots_id = $1 AND user_id = $2`;
 
       const robotResult = isAdmin
         ? await pgClient.query(robotQuery, [robot_id])
@@ -276,6 +270,7 @@ router.get('/sensor-data/:robot_id/latest10', authenticateToken, async (req, res
   const robotId = parseInt(req.params.robot_id, 10);
   const userId = req.userId;
   const isAdmin = req.isAdmin;
+  
 
   if (isNaN(robotId)) {
     return res.status(400).json({ error: "robot_id ต้องเป็นตัวเลข" });
@@ -285,8 +280,8 @@ router.get('/sensor-data/:robot_id/latest10', authenticateToken, async (req, res
     const pgClient = await db.connect();
     try {
       const robotQuery = isAdmin
-        ? `SELECT device_id, token FROM robots WHERE id = $1`
-        : `SELECT device_id, token FROM robots WHERE id = $1 AND user_id = $2`;
+        ? `SELECT device_id, token FROM robots WHERE robots_id = $1`
+        : `SELECT device_id, token FROM robots WHERE robots_id = $1 AND user_id = $2`;
 
       const robotResult = isAdmin
         ? await pgClient.query(robotQuery, [robotId])
@@ -301,16 +296,16 @@ router.get('/sensor-data/:robot_id/latest10', authenticateToken, async (req, res
       if (!device_id || !token) {
         return res.status(400).json({ error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
       }
-      const apiUrl = `${API_SERVER_URL}/api/sensor-data/${device_id}/latest10`;
 
-      const response = await axios.get(apiUrl, {
+      const response = await axios.get(`${API_SERVER_URL}/api/sensor-data/${device_id}/latest10`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
         timeout: 10000
       });
 
-      return res.json(response.data);
+      return res.json(response.data.data);
+      
 
     } finally {
       pgClient.release();
@@ -343,10 +338,10 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
     const pgClient = await db.connect();
     try {
       const pgQuery = `
-        SELECT r.id, r.user_id, r.robot_name, r.device_id, r.token,
+        SELECT r.robots_id, r.user_id, r.robot_name, r.device_id, r.token,
                u.email, u.phone, u.first_name, u.last_name
         FROM robots r
-        LEFT JOIN users u ON r.user_id = u.id
+        LEFT JOIN users u ON r.user_id = u.user_id
       `;
       const pgResult = await pgClient.query(pgQuery);
       const pgRobots = pgResult.rows;
@@ -371,7 +366,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
         const isOnline = lastUpdate ? (now - lastUpdate < 300000) : false;
 
         return {
-          id: robot?.id || null,
+          id: robot?.robots_id || null,
           user_id: robot?.user_id || null,
           phone: robot?.phone || null,
           robot_name: robot?.robot_name || null,
@@ -379,7 +374,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
           token: robot?.token || null,
           email: robot?.email || null,
           firstName: robot?.first_name || null,
-          lastName: robot?.last_name || null,
+          lastName: robot?.last_name || null, 
           isOnline,
           last_update: status?.last_update || null,
           ...status,
@@ -409,8 +404,8 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
     const pgClient = await db.connect();
     try {
       const query = isAdmin
-        ? `SELECT device_id, token FROM robots WHERE id = $1`
-        : `SELECT device_id, token FROM robots WHERE id = $1 AND user_id = $2`;
+        ? `SELECT device_id, token FROM robots WHERE robots_id = $1`
+        : `SELECT device_id, token FROM robots WHERE robots_id = $1 AND user_id = $2`;
 
       const values = isAdmin ? [robot_id] : [robot_id, user_id];
       const result = await pgClient.query(query, values);
@@ -502,7 +497,7 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
       pgClient.release();
     }
 
-    const mongoRes = await axios.get(`${API_SERVER_URL}/mongodb/spray-logs`, {
+    const mongoRes = await axios.get(`${API_SERVER_URL}/api/spray-logs`, {
       params: { device_id, startDate, endDate }
     });
 
@@ -568,7 +563,7 @@ router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
       pgClient.release();
     }
 
-    const mongoRes = await axios.get(`${API_SERVER_URL}/mongodb/chemical-usage-by-type`, {
+    const mongoRes = await axios.get(`${API_SERVER_URL}/api/chemical-usage-by-type`, {
       params: { device_id, startDate, endDate }
     });
 
@@ -610,7 +605,7 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
       pgClient.release();
     }
 
-    const HistoryData = await axios.get(`${API_SERVER_URL}/mongodb/chemical-usage-history`, {
+    const HistoryData = await axios.get(`${API_SERVER_URL}/api/chemical-usage-history`, {
       params: { device_id, startDate, endDate }
     });
 

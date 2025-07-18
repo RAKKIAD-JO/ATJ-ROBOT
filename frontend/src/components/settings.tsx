@@ -35,7 +35,6 @@ export default function SettingsPage() {
       })
       .then(user => {
         if (!user) return;
-        // สมมุติ API ส่ง { firstName, lastName, email, phone, profileImage }
         setProfileFullName(
           [user.firstName, user.lastName].filter(Boolean).join(" ")
         );

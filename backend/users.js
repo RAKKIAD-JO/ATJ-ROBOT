@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 const authenticateToken = require('./middleware/auth');
 const multer = require('multer');
 const path = require('path');
-const axios = require("axios");
+//const axios = require("axios");
 const fs = require('fs');
 const util = require('util');
 const unlinkAsync = util.promisify(fs.unlink);
@@ -26,11 +26,11 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+
 // ✅ REGISTER USER
 router.post("/register", async (req, res) => {
   const { firstName, lastName, passWord, phoneNumber, email } = req.body;
   try {
-    // ตรวจสอบว่ามี email ซ้ำไหม
     const checkEmail = await pool.query(
       `SELECT * FROM users WHERE email = $1`,
       [email]
@@ -39,26 +39,20 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email นี้มีผู้ใช้แล้ว" });
     }
 
-    // เข้ารหัสรหัสผ่าน
     const hashedPassword = await bcrypt.hash(passWord, 10);
-
-    // บันทึกผู้ใช้ใหม่
     const result = await pool.query(
       `INSERT INTO users (first_name, last_name, phone, email, password, is_verified)
        VALUES ($1, $2, $3, $4, $5, false) RETURNING *`,
       [firstName, lastName, phoneNumber, email, hashedPassword]
     );
-
-    // ✅ สร้าง token ยืนยันอีเมล
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 10 * 60000); // 10 นาที
+    const expiresAt = new Date(Date.now() + 10 * 60000);
 
     await pool.query(
       `INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)`,
       [email, token, expiresAt]
     );
 
-    // ✅ สร้าง transporter เพื่อส่งอีเมล
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -72,35 +66,35 @@ router.post("/register", async (req, res) => {
       to: email,
       subject: "ยืนยันอีเมลของคุณ",
       html: `
-    <div style="font-family: 'Kanit', sans-serif; background: #f0f4f8; padding: 40px;">
-      <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <img src="https://img.icons8.com/color/96/verified-account--v1.png" alt="verify icon" style="width: 60px; margin-bottom: 10px;">
-          <h2 style="color: #333333; margin: 0;">ยืนยันอีเมลของคุณ</h2>
+      <div style="font-family: 'Kanit', sans-serif; background: #f0f4f8; padding: 40px;">
+        <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://img.icons8.com/color/96/verified-account--v1.png" alt="verify icon" style="width: 60px; margin-bottom: 10px;">
+            <h2 style="color: #333333; margin: 0;">ยืนยันอีเมลของคุณ</h2>
+          </div>
+          <p style="color: #555555; font-size: 16px; text-align: center;">
+            ขอบคุณที่สมัครใช้งาน ATJRobot<br>
+            กรุณาคลิกลิงก์ด้านล่างเพื่อยืนยันอีเมลของคุณ:
+          </p>
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="https://www.atj-robots.online/api/users/verify-email?email=${email}&token=${token}"
+              style="display: inline-block; padding: 14px 28px; background-color: #17a2b8; color: white; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 50px; transition: background 0.3s;">
+              ยืนยันอีเมล
+            </a>
+          </div>
+          <p style="margin-top: 30px; font-size: 14px; color: #888888; text-align: center;">
+            * ลิงก์จะหมดอายุใน 10 นาที<br>
+            หากคุณไม่ได้ทำการสมัคร กรุณาละเว้นอีเมลนี้
+          </p>
         </div>
-        <p style="color: #555555; font-size: 16px; text-align: center;">
-          ขอบคุณที่สมัครใช้งาน ATJRobot<br>
-          กรุณาคลิกลิงก์ด้านล่างเพื่อยืนยันอีเมลของคุณ:
-        </p>
-        <div style="text-align: center; margin-top: 30px;">
-          <a href="https://www.atj-robots.online/api/users/verify-email?email=${email}&token=${token}"
-             style="display: inline-block; padding: 14px 28px; background-color: #17a2b8; color: white; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 50px; transition: background 0.3s;">
-            ยืนยันอีเมล
-          </a>
-        </div>
-        <p style="margin-top: 30px; font-size: 14px; color: #888888; text-align: center;">
-          * ลิงก์จะหมดอายุใน 10 นาที<br>
-          หากคุณไม่ได้ทำการสมัคร กรุณาละเว้นอีเมลนี้
-        </p>
       </div>
-    </div>
-  `,
+    `,
     });
 
     res.status(201).json({
       message: "ลงทะเบียนสำเร็จ กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ",
       user: {
-        id: result.rows[0].id,
+        id: result.rows[0].user_id,
         firstName: result.rows[0].first_name,
         lastName: result.rows[0].last_name,
         email: result.rows[0].email,
@@ -138,7 +132,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id,
+      { userId: user.user_id,
         isAdmin: user.is_admin || false,
       },
       process.env.JWT_SECRET,
@@ -147,7 +141,7 @@ router.post("/login", async (req, res) => {
 
     await pool.query(
       `INSERT INTO login_history (user_id, is_admin) VALUES ($1, $2)`,
-      [user.id, user.is_admin || false]
+      [user.user_id, user.is_admin || false]
     );
 
     res.cookie('token', token, {
@@ -160,12 +154,13 @@ router.post("/login", async (req, res) => {
     res.status(200).json({
       message: "เข้าสู่ระบบสำเร็จ",
       user: {
-        id: user.id,
+        user_id: user.user_id,
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
         phone: user.phone,
         isAdmin: user.is_admin || false,
+        
       },
     });
   } catch (error) {
@@ -243,8 +238,8 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ message: "OTP ไม่ถูกต้องหรือหมดอายุ" });
     }
 
-    await pool.query(`UPDATE otp_requests SET verified = true WHERE id = $1`, [
-      result.rows[0].id,
+    await pool.query(`UPDATE otp_requests SET verified = true WHERE otp_id = $1`, [
+      result.rows[0].otp_id,
     ]);
 
     res.status(200).json({ message: "OTP ถูกต้อง สามารถเปลี่ยนรหัสผ่านได้" });
@@ -290,7 +285,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
   console.log("GET /profile - userId:", userId); // ดู userId จาก token
   try {
     const result = await pool.query(
-      `SELECT id, first_name, last_name, phone, email, profile_image ,is_admin FROM users WHERE id = $1`,
+      `SELECT user_id, first_name, last_name, phone, email, profile_image ,is_admin FROM users WHERE user_id = $1`,
       [userId]
     );
     if (result.rows.length === 0) {
@@ -327,7 +322,7 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
   try {
     if (req.file) {
       const oldImg = await pool.query(
-        `SELECT profile_image FROM users WHERE id = $1`,
+        `SELECT profile_image FROM users WHERE user_id = $1`,
         [userId]
       );
       const oldPath = oldImg.rows[0]?.profile_image;
@@ -339,7 +334,6 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
       }
     }
 
-    // เตรียม query และ params ตามฟิลด์ที่ส่งมา
     const fields = [];
     const params = [];
     let idx = 1;
@@ -371,7 +365,7 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
     }
 
     params.push(userId);
-    const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = $${idx}`;
+    const sql = `UPDATE users SET ${fields.join(", ")} WHERE user_id = $${idx}`;
     await pool.query(sql, params);
 
     res.json({ message: "อัปเดตข้อมูลสำเร็จ" });
@@ -380,33 +374,32 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
   }
 });
 
-// ✅ ADD TOKER TO USER
-router.post("/add-toker", authenticateToken, async (req, res) => {
-  const userId = req.userId; // ดึงจาก token
-  const { toker } = req.body;
+// ✅ ADD token TO USER
+/*router.post("/add-token", authenticateToken, async (req, res) => {
+  const userId = req.userId;
+  const { token } = req.body;
 
   try {
-    // ตรวจสอบกับ MongoDB API
-    const response = await axios.get(`http://iot-server:3000/token/${toker}`);
+    const response = await axios.get(`http://iot-server:3000/token/${token}`);
     if (!response.data || response.status !== 200) {
-      return res.status(404).json({ error: "Toker not found in MongoDB" });
+      return res.status(404).json({ error: "token not found in MongoDB" });
     }
 
-    // บันทึกลง PostgreSQL
     const result = await pool.query(
-      'UPDATE users SET toker = $1 WHERE id = $2 RETURNING *',
-      [toker, userId]
+      'UPDATE users SET token = $1 WHERE id = $2 RETURNING *',
+      [token, userId]
     );
 
-    return res.json({ message: "Toker saved", user: result.rows[0] });
+    return res.json({ message: "token saved", user: result.rows[0] });
   } catch (error) {
     if (error.response?.status === 404) {
-      return res.status(404).json({ error: "Toker not found in MongoDB" });
+      return res.status(404).json({ error: "token not found in MongoDB" });
     }
     console.error(error);
     res.status(500).json({ error: "Server error" });
   }
-});
+});*/
+
 // ✅ GET TOKEN EMAIL
 router.get("/verify-email", async (req, res) => {
   const { email, token } = req.query;

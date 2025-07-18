@@ -29,9 +29,9 @@ services:
     networks:
       - app-net
 
-  express:
+  backend:
     build: ./backend
-    container_name: server-express
+    container_name: server-backend
     ports:
       - "5000:5000"
     environment:
@@ -53,7 +53,7 @@ services:
     build: ./frontend
     container_name: server-nextjs
     depends_on:
-      - express
+      - backend
     ports:
       - "4000:4000"
     networks:
