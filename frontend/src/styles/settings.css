@@ -73,6 +73,7 @@
   
   /* ปุ่มอัปโหลดรูป */
   .upload-button {
+    font-family: var(--font-kanit), sans-serif;
     background-color: #88b7b9;
     color: #fff;
     padding: 10px 20px;

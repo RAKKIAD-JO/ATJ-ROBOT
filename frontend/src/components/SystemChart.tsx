@@ -55,9 +55,9 @@ const SystemChart = ({ deviceId }: Props) => {
         });
 
         setData(formattedData);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setError(error.message);
         } else {
           setError("Error loading data");
         }

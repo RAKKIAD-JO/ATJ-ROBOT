@@ -5,11 +5,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://express:5000/api/:path*", 
+        destination: "http://backend:5000/api/:path*", 
       },
       {
         source: "/uploads/:path*",
-        destination: "http://express:5000/uploads/:path*",
+        destination: "http://backend:5000/uploads/:path*",
       },
       {
         source: "/iot-api/:path*",
@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/robot/:path*",
-        destination: "http://express:5000/robot/:path*",
+        destination: "http://backend:5000/robot/:path*",
       },
     ];
   },
