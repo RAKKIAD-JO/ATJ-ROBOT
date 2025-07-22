@@ -23,7 +23,7 @@ type SensorData = {
 };
 
 type Props = {
-  deviceId: string | number;
+  deviceId: number;
 };
 
 const SystemChart = ({ deviceId }: Props) => {
@@ -41,8 +41,8 @@ const SystemChart = ({ deviceId }: Props) => {
       setLoading(true);
       setError(null);
       try {
-        const sensorList: RawSensorData[] = await fetchLatestSensorData(deviceId.toString());
-        console.log("Fetched sensor list:", sensorList); 
+        const sensorList: RawSensorData[] = await fetchLatestSensorData(deviceId);
+        console.log("Fetched sensor list:", sensorList);
         const formattedData = sensorList.map((item) => {
           const date = new Date(item.timestamp);
           const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

@@ -50,7 +50,7 @@ export default function Home() {
     }, [router]);
 
     useEffect(() => {
-      if (!selectedRobot?.id) {
+      if (!selectedRobot?.robot_id) {
         setSensorData(null);
         setDataType(null);
         return;
@@ -61,7 +61,7 @@ export default function Home() {
         setLoadingSensor(true);
         setError(null);
         try {
-          const data = await fetchSensorData(selectedRobot.id);
+          const data = await fetchSensorData(selectedRobot.robot_id);
           setSensorData(data);
           
         } catch (error) {
@@ -81,7 +81,7 @@ export default function Home() {
         setLoadingDataType(true);
         setError(null);
         try {
-          const data = await fetchRobotData(selectedRobot.id);
+          const data = await fetchRobotData(selectedRobot.robot_id);
           setDataType(data);
         } catch (error) {
           if (error instanceof Error) {
@@ -199,7 +199,7 @@ export default function Home() {
               <div className="haeder-graph-contens">
                 <div className="graph-contens">
                   <h2>กราฟแสดงสถานะ</h2>
-                  <SystemChart deviceId={selectedRobot.id} />
+                  <SystemChart deviceId={selectedRobot.robot_id} />
                 </div>
 
                 <div className="data">

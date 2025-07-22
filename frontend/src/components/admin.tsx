@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import '@/styles/admin.css';
 
 interface Robot {
-    id: number; 
+    robot_id: number; 
     device_id: string;
     token: string;
     status: 'online' | 'offline';
@@ -91,15 +91,11 @@ export default function AdminPage() {
     
     const handleSelectRobot = (robot: Robot) => {
         setSelectedRobot({
-            id: robot.id,
+            robot_id: robot.robot_id,
             robot_name: robot.firstName ? `${robot.firstName} ${robot.lastName || ''}` : 'ไม่มีชื่อ',
             device_id: robot.device_id,
-            batteryLevel: 0,
-            flowRate: 0,
-            waterLevel: 0,
-            robotStatus: robot.status === 'online',
-            pumpStatus: false,
         });
+        
         router.push('/home'); 
     };
 

@@ -66,7 +66,7 @@ main .graph-select {
     justify-content: center;
     max-width: 90%;
     width: 850px;
-    height: 230px;
+    height: 220px;
     border-radius: 1.4rem;
     margin-bottom: 1.8rem;
     background-color: rgb(255, 255, 255);
@@ -79,7 +79,7 @@ main .graph-select {
     justify-content: center;
     max-width: 90%;
     width: 850px;
-    height: 230px;
+    height: 220px;
     border-radius: 1.4rem;
     margin-bottom: 1.8rem;
     background-color: rgb(255, 255, 255);
@@ -184,6 +184,7 @@ section .chemical-hazardous-item span {
 }
 
 .graph-detail-box {
+    height: 210px;
     margin-top: 1.2rem;
     padding: 1rem;
     background-color: #f9f9f9;

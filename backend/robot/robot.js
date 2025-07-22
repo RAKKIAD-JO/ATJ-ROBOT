@@ -99,7 +99,7 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
         token: robot.token
       }));
       try {
-        const statusResponse = await axios.post(`${API_SERVER_URL}/devices-status`, 
+        const statusResponse = await axios.post(`${API_SERVER_URL}/api/devices-status`, 
           { devices }
         );
 
@@ -110,8 +110,9 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
             );
             
             return {
-              ...robot,
-              isOnline: statusData?.isOnline || false,
+              robot_id: robot.robots_id,
+              robot_name: robot.robot_name,
+              device_id: robot.device_id,
               lastSeen: statusData?.last_update,
               hasSensorData: statusData?.hasSensorData || false,
               status: statusData?.status
@@ -125,7 +126,6 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
         } else {
           const robotsWithBasicData = result.rows.map(robot => ({
             ...robot,
-            isOnline: false,
             lastSeen: null,
             hasSensorData: false,
             status: 'unknown'
@@ -142,7 +142,6 @@ router.get("/my_robot", authenticateToken, async (req, res) => {
         
         const robotsWithBasicData = result.rows.map(robot => ({
           ...robot,
-          isOnline: false,
           lastSeen: null,
           hasSensorData: false,
           status: 'unknown'
@@ -366,7 +365,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
         const isOnline = lastUpdate ? (now - lastUpdate < 300000) : false;
 
         return {
-          id: robot?.robots_id || null,
+          robot_id: robot?.robots_id || null,
           user_id: robot?.user_id || null,
           phone: robot?.phone || null,
           robot_name: robot?.robot_name || null,

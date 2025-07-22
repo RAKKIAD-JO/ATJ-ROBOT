@@ -229,8 +229,7 @@ router.post("/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
   try {
     const result = await pool.query(
-      `SELECT * FROM otp_requests 
-       WHERE email = $1 AND otp_code = $2 AND verified = false AND expires_at > NOW()`,
+      `SELECT * FROM otp_requests WHERE email = $1 AND otp_code = $2 AND verified = false AND expires_at > NOW()`,
       [email, otp]
     );
 
@@ -254,16 +253,13 @@ router.post("/reset-password", async (req, res) => {
   const { email, newPassword } = req.body;
   try {
     const otpVerified = await pool.query(
-      `SELECT * FROM otp_requests 
-       WHERE email = $1 AND verified = true 
+      `SELECT * FROM otp_requests WHERE email = $1 AND verified = true 
        ORDER BY expires_at DESC LIMIT 1`,
       [email]
     );
 
     if (otpVerified.rows.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "ยังไม่ได้ยืนยัน OTP หรือหมดอายุแล้ว" });
+      return res.status(400).json({ message: "ยังไม่ได้ยืนยัน OTP หรือหมดอายุแล้ว" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -271,6 +267,8 @@ router.post("/reset-password", async (req, res) => {
       hashedPassword,
       email,
     ]);
+
+    await pool.query(`DELETE FROM otp_requests WHERE email = $1`, [email]);
 
     res.status(200).json({ message: "รีเซ็ตรหัสผ่านสำเร็จ" });
   } catch (error) {
@@ -281,8 +279,8 @@ router.post("/reset-password", async (req, res) => {
 
 // ✅ GET PROFILE
 router.get("/profile", authenticateToken, async (req, res) => {
-  const userId = req.userId; // ได้ userId จาก JWT
-  console.log("GET /profile - userId:", userId); // ดู userId จาก token
+  const userId = req.userId;
+  console.log("GET /profile - userId:", userId); 
   try {
     const result = await pool.query(
       `SELECT user_id, first_name, last_name, phone, email, profile_image ,is_admin FROM users WHERE user_id = $1`,
@@ -406,14 +404,14 @@ router.get("/verify-email", async (req, res) => {
 
   if (!email || !token) {
     return res.send(`
-  <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
-    <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
-      <img src="https://img.icons8.com/fluency/96/error.png" alt="Error Icon" style="width: 60px; margin-bottom: 20px;" />
-      <h2 style="color: #e74c3c; margin-bottom: 10px;">ลิงก์ไม่ถูกต้อง</h2>
-      <p style="color: #555555; font-size: 16px;">กรุณาตรวจสอบลิงก์อีกครั้ง หรือลงทะเบียนใหม่</p>
+    <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+      <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+        <img src="https://img.icons8.com/fluency/96/error.png" alt="Error Icon" style="width: 60px; margin-bottom: 20px;" />
+        <h2 style="color: #e74c3c; margin-bottom: 10px;">ลิงก์ไม่ถูกต้อง</h2>
+        <p style="color: #555555; font-size: 16px;">กรุณาตรวจสอบลิงก์อีกครั้ง หรือลงทะเบียนใหม่</p>
+      </div>
     </div>
-  </div>
-`);
+    `);
   }
 
   try {
@@ -426,26 +424,26 @@ router.get("/verify-email", async (req, res) => {
 
     if (!record) {
       return res.send(`
-    <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
-      <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
-        <img src="https://img.icons8.com/color/96/cancel--v1.png" alt="Not Found Icon" style="width: 60px; margin-bottom: 20px;" />
-        <h2 style="color: #e67e22; margin-bottom: 10px;">ไม่พบข้อมูลการยืนยัน</h2>
-        <p style="color: #555555; font-size: 16px;">ลิงก์ไม่ถูกต้อง หรือคุณได้ยืนยันอีเมลไปแล้ว</p>
-      </div>
-    </div>
-  `);
+        <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+          <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+            <img src="https://img.icons8.com/color/96/cancel--v1.png" alt="Not Found Icon" style="width: 60px; margin-bottom: 20px;" />
+            <h2 style="color: #e67e22; margin-bottom: 10px;">ไม่พบข้อมูลการยืนยัน</h2>
+            <p style="color: #555555; font-size: 16px;">ลิงก์ไม่ถูกต้อง หรือคุณได้ยืนยันอีเมลไปแล้ว</p>
+          </div>
+        </div>
+      `);
     }
 
     if (new Date() > new Date(record.expires_at)) {
       return res.send(`
-    <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
-      <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
-        <img src="https://img.icons8.com/color/96/hourglass--v1.png" alt="Expired Icon" style="width: 60px; margin-bottom: 20px;" />
-        <h2 style="color: #d35400; margin-bottom: 10px;">ลิงก์หมดอายุ</h2>
-        <p style="color: #555555; font-size: 16px;">กรุณาลงทะเบียนใหม่ หรือขอการยืนยันอีกครั้ง</p>
-      </div>
-    </div>
-  `);
+        <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+          <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+            <img src="https://img.icons8.com/color/96/hourglass--v1.png" alt="Expired Icon" style="width: 60px; margin-bottom: 20px;" />
+            <h2 style="color: #d35400; margin-bottom: 10px;">ลิงก์หมดอายุ</h2>
+            <p style="color: #555555; font-size: 16px;">กรุณาลงทะเบียนใหม่ หรือขอการยืนยันอีกครั้ง</p>
+          </div>
+        </div>
+      `);
     }
 
     // อัปเดตให้ผู้ใช้ verified
@@ -459,16 +457,16 @@ router.get("/verify-email", async (req, res) => {
     ]);
 
     return res.send(`
-  <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
-    <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
-      <img src="https://img.icons8.com/color/96/verified-account--v1.png" alt="Verified Icon" style="width: 60px; margin-bottom: 20px;" />
-      <h2 style="color: #2c3e50; margin-bottom: 10px;">ยืนยันอีเมลสำเร็จ!</h2>
-      <p style="color: #555555; font-size: 16px;">ขอบคุณที่ยืนยันอีเมลของคุณ<br>คุณสามารถใช้งานระบบได้ทันที</p>
-    </div>
-  </div>
-`);
-  } catch (err) {
-    console.error(err);
+      <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
+        <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
+          <img src="https://img.icons8.com/color/96/verified-account--v1.png" alt="Verified Icon" style="width: 60px; margin-bottom: 20px;" />
+          <h2 style="color: #2c3e50; margin-bottom: 10px;">ยืนยันอีเมลสำเร็จ!</h2>
+          <p style="color: #555555; font-size: 16px;">ขอบคุณที่ยืนยันอีเมลของคุณ<br>คุณสามารถใช้งานระบบได้ทันที</p>
+        </div>
+      </div>
+    `);
+  } catch (error) {
+    console.error(error);
     res.status(500).send(`
       <h2>เกิดข้อผิดพลาด</h2>
       <p>กรุณาลองใหม่ภายหลัง</p>

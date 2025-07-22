@@ -59,10 +59,10 @@ export default function OtpPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message); // "OTP ถูกต้อง..."
+        alert(data.message); 
         router.push("/reset-password?email=" + encodeURIComponent(email));
       } else {
-        alert(data.message); // "OTP ไม่ถูกต้องหรือหมดอายุ"
+        alert(data.message); 
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);

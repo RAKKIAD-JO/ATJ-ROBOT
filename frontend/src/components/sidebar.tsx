@@ -3,19 +3,12 @@ import Link from "next/link"
 import { usePathname, useRouter} from "next/navigation"
 import { useEffect,useRef,useState} from "react"
 import "@/styles/sidebar.css"
-import { useSelectedRobot, RobotInfo } from "@/app/contexts/SelectedRobotContext";
+import { useSelectedRobot} from "@/app/contexts/SelectedRobotContext";
 
-export type RobotType = {
-    id: number;
+interface RobotType {
+    robot_id: number;
     robot_name: string;
-    device_id: string;
-    isOnline: boolean;
-
-    batteryLevel: number;     
-    flowRate: number;         
-    waterLevel: number;       
-    robotStatus: boolean;     
-    pumpStatus: boolean;      
+    device_id: string;    
 };
 
 export default function Sidebar() {
@@ -40,19 +33,6 @@ export default function Sidebar() {
     }
     
     useEffect(() => {
-        fetch("/robot/my_robot", {
-            method: 'GET',
-            credentials: "include", 
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                setRobots(data.robots);
-            } else {
-                setRobots([]);
-            }
-        })
-        .catch(err => console.error("Error fetching robots:", err));
         fetch("/api/users/profile", {
             method: 'GET',
             credentials: "include"
@@ -87,31 +67,27 @@ export default function Sidebar() {
                     credentials: "include"
                 });
 
-                if (res.status === 204) {
-                    setRobots([]);
-                    setHasFetched(true);
-                    return;
-                }
-
                 const data = await res.json();
-
-                if (data.success) {
+                if (Array.isArray(data.robots)) {
                     setRobots(data.robots);
+
                 } else {
                     console.warn("API ตอบกลับไม่สำเร็จ", data);
                     setRobots([]);
                 }
+                 
+            
 
                 setHasFetched(true);
-            } catch (err) {
+            } catch (error) {
                 if (
-                  typeof err === "object" &&
-                  err &&
-                  "name" in err &&
-                  typeof (err as { name?: unknown }).name === "string" &&
-                  (err as { name?: string }).name !== "AbortError"
+                  typeof error === "object" &&
+                  error &&
+                  "name" in error &&
+                  typeof (error as { name?: unknown }).name === "string" &&
+                  (error as { name?: string }).name !== "AbortError"
                 ) {
-                    console.error("Fetch robots ผิดพลาด:", err);
+                    console.error("Fetch robots ผิดพลาด:", error);
                 }
                 setRobots([]);
             } finally {
@@ -146,11 +122,16 @@ export default function Sidebar() {
         router.push("/token");
     }
 
-    const handleSelectRobot = (robot: RobotInfo) => {
-        setSelectedRobot(robot);
+    const handleSelectRobot = (robot: RobotType) => {
+        setSelectedRobot({
+            robot_id: robot.robot_id,
+            robot_name: robot.robot_name,
+            device_id: robot.device_id,
+        });
         setIsSidebarOpen(false);
-        if (pathname !== "/home") router.push("/home");
+        router.push('/home'); 
     };
+
     const handleLogout = async () => {
         await fetch("/api/users/logout", {
             method: "POST",
@@ -231,11 +212,11 @@ export default function Sidebar() {
                                     ) : robots.length > 0 ? (
                                         robots.map((robot) => (
                                             <p
-                                                key={robot.id}
+                                                key={robot.robot_id}
                                                 className="robot-item"
                                                 onClick={() => {
                                                     handleSelectRobot(robot);
-                                                    setShowRobots(false); // ปิด popup เมื่อเลือก
+                                                    setShowRobots(false);
                                                 }}
                                             >
                                                 {robot.robot_name}
