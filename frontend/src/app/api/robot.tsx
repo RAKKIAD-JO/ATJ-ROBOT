@@ -1,4 +1,4 @@
-// type สำหรับข้อมูลปัจจุบันของ sensor (1 ค่า)
+
 export type SensorDataType = {
   battery: number;
   sprayRate: number;
@@ -27,18 +27,18 @@ export type Esp32DataType = {
 function toThaiDatetimeString(dateStr: string) {
     const date = new Date(dateStr);
     return date.toLocaleString('th-TH', {
+        timeZone: 'UTC',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        timeZone: 'Asia/Bangkok'
     });
 }
 
 
-export async function fetchLatestSensorData(robotId: string): Promise<RawSensorData[]> {
+export async function fetchLatestSensorData(robotId: number): Promise<RawSensorData[]> {
   const res = await fetch(`/robot/sensor-data/${robotId}/latest10`, {
     method: 'GET',
     credentials: 'include',
@@ -51,7 +51,7 @@ export async function fetchLatestSensorData(robotId: string): Promise<RawSensorD
 }
 
 export async function fetchMyRobots() {
-  const res = await fetch('/robot/my-robots', {
+  const res = await fetch('/robot/my-robot', {
     method: 'GET',
     credentials: 'include',
   });

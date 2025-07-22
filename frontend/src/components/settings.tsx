@@ -8,7 +8,7 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState(''); // ตั้งค่าเริ่มต้นได้จากระบบ
+  const [email, setEmail] = useState(''); 
   const [phone, setPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

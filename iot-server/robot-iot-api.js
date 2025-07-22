@@ -30,7 +30,7 @@ function normalizeLiquidType(tupe) {
 
 // API input status from ESP32
 router.post('/esp32-status', async (req, res) => {
-  const { device_id, token, status } = req.body;
+  const { device_id, token, status} = req.body;
   console.log('Received Data:', req.body); 
 
   if (!device_id || !token) {
@@ -58,7 +58,12 @@ router.post('/esp32-status', async (req, res) => {
 
     res.json({ 
       success: true, 
-      data: device 
+      data: {
+        device_id : device.device_id,
+        status : device.status,
+        token : device.token,
+        last_update: device.last_update
+      } 
     });
   } catch (error) {
     console.error('Error updating MongoDB:', error);
@@ -319,27 +324,19 @@ router.post("/devices-status", async (req, res) => {
 
   try {
     const statusPromises = devices.map(async ({ device_id, token }) => {
+      
       try {
-        const [status, sensorData] = await Promise.all([
-          Esp32Status.findOne({ device_id, token }).lean(),
-          Esp32Sensor.findOne({ device_id }).sort({ timestamp: -1 }).lean()
-        ]);
+        const status = await Esp32Status.findOne({ device_id, token }).lean();
+        const sensorData = await Esp32Sensor.findOne({ device_id }).sort({ timestamp: -1 }).lean();
 
         return {
           device_id,
-          status: status?.status,
-          last_update: status?.last_update,
+          status: status?.status || null,
+          last_update: status?.last_update || null,
           hasSensorData: !!sensorData
         };
       } catch (error) {
         console.error(`Error for device ${device_id}:`, error);
-        return {
-          device_id,
-          status: null,
-          last_update: null,
-          hasSensorData: false,
-          error: error.message
-        };
       }
     });
 
@@ -657,25 +654,5 @@ router.get("/chemical-usage-history", async (req, res) => {
     return res.status(500).json({ error: "MongoDB server error" });
   }
 });
-
-// การปรับ เป็น offline
-const timemin = 2; 
-const CHECK_INTERVAL = 60000; 
-const TIMEOUT_LIMIT = timemin * 10000;
-
-setInterval(async () => {
-  const now = new Date();
-  try {
-    const result = await Status.updateMany(
-      { last_update: { $lt: new Date(now - TIMEOUT_LIMIT) }, status: "online" },
-      { $set: { status: "offline" } }
-    );
-    if (result.modifiedCount > 0) {
-      console.log(`Updated ${result.modifiedCount} devices to offline.`);
-    }
-  } catch (error) {
-    console.error('Error checking device statuses:', error);
-  }
-}, CHECK_INTERVAL);
 
 module.exports = router;

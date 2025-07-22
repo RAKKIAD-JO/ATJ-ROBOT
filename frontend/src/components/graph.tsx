@@ -100,8 +100,7 @@ export default function Graph() {
   async function fetchUsageByType() {
     if (!selectedRobot || !startDate || !endDate) return;
     try {
-      const res = await fetch(
-        `/robot/chemical-usage-by-type?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}`,
+      const res = await fetch(`/robot/chemical-usage-by-type?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}`,
         {
           method: 'GET',
           credentials: 'include',

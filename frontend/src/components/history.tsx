@@ -164,13 +164,13 @@ export default function HistoryPage() {
     function toThaiDatetimeString(dateStr: string) {
     const date = new Date(dateStr);
     return date.toLocaleString('th-TH', {
+        timeZone: 'UTC',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        timeZone: 'Asia/Bangkok'
     });
 }
     return (
