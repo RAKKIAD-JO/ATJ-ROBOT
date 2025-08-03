@@ -37,9 +37,12 @@ const SystemChart = ({ deviceId }: Props) => {
       return;
     }
 
+    let intervalId: NodeJS.Timeout;
+
     const loadData = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const sensorList: RawSensorData[] = await fetchLatestSensorData(deviceId);
         console.log("Fetched sensor list:", sensorList);
@@ -67,7 +70,16 @@ const SystemChart = ({ deviceId }: Props) => {
       }
     };
 
-    loadData();
+    if (deviceId) {
+      loadData(); // โหลดทันทีครั้งแรก
+      intervalId = setInterval(() => {
+        loadData();
+      }, 30000); // ทุก 30 วินาที
+    }
+
+    return () => {
+      clearInterval(intervalId); // ล้างเมื่อ component ถูก unmount หรือ deviceId เปลี่ยน
+    };
   }, [deviceId]);
 
   if (loading) return <div>Loading chart...</div>;

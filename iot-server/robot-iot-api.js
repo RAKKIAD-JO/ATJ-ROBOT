@@ -635,6 +635,7 @@ router.get("/chemical-usage-history", async (req, res) => {
         usageHistory: DataLogs.map((log) => {
           const logDate = new Date(log.timestamp).toISOString().split("T")[0];
           return {
+            _id: log._id,
             plantType: log.plantType,
             liquidType: log.liquidType,
             chemicalName: log.chemicalName,
@@ -652,6 +653,25 @@ router.get("/chemical-usage-history", async (req, res) => {
   } catch (error) {
     console.error("Error fetching MongoDB chemical usage history:", error);
     return res.status(500).json({ error: "MongoDB server error" });
+  }
+});
+
+router.put("/mongo-history/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const updated = await Esp32Data.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูล MongoDB" });
+    }
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("Mongo PUT error:", err);
+    res.status(500).json({ success: false, message: "MongoDB error" });
   }
 });
 

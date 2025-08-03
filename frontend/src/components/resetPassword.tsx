@@ -14,7 +14,6 @@ export default function ResetPassword() {
     const handlerResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
 
-
         if (newPassword !== confirmPassword) {
             alert("รัหสผ่านไม่ตรงกัน");
             return;
