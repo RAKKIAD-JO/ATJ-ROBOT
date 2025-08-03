@@ -4,7 +4,7 @@ export type SensorDataType = {
   sprayRate: number;
   waterLevel: number;
   deviceStatus: "online" | "offline";
-  pumpStatus: boolean;
+  pumpStatus: "ON" | "OFF";
 };
 
 export type RawSensorData = {

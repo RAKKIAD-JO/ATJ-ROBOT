@@ -1,18 +1,18 @@
 .main-loading {
-    /* border: 3px solid; */
+    /* border: 3px solid #17a2b8; */
     /* margin:  100px auto auto 250px ; */
-    width: 85vw;
+    width: 100vw;
     height: 100vh;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
 }
 
 .title-loading {
-    /* border: 2px solid red; */
-    text-align: center;
-    /* padding: 10px; */
-
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #17a2b8;
 }
 
 .head-title-loading {

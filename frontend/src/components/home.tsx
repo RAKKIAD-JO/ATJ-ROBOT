@@ -56,6 +56,17 @@ export default function Home() {
         return;
       }
 
+      const intervalId = setInterval(() => {
+        fetchSensorData(selectedRobot.robot_id)
+          .then(setSensorData)
+          .catch(console.error);
+
+        fetchRobotData(selectedRobot.robot_id)
+          .then(setDataType)
+          .catch(console.error);
+      }, 30000);// 30 วินาที
+
+
       // โหลดข้อมูลเซ็นเซอร์
       const loadSensor = async () => {
         setLoadingSensor(true);
@@ -97,6 +108,8 @@ export default function Home() {
 
       loadSensor();
       loadDataType();
+
+      return () => clearInterval(intervalId);
     }, [selectedRobot]);
 
   const batteryPercent = Number(sensorData?.battery) || 0;
@@ -187,7 +200,7 @@ export default function Home() {
                     <span className="material-symbols-outlined pump-icon">water_pump</span>
                     <div className="status-info">
                       <p>ปั๊มน้ำ</p>
-                      <div className="pump-state">{sensorData.pumpStatus ? "ON" : "OFF"}</div>
+                      <div className="pump-state">{sensorData.pumpStatus === "ON" ? "ON" : "OFF"}</div>
                     </div>
                   </div>
                 </div>

@@ -15,15 +15,15 @@ import { useRouter } from "next/navigation";
 import Loading from "@/components/loading";
 
 interface HistoryItem {
-    id: number;
+    _id?: string;
     date: string;
     plantType: string;
-    category: string;
+    liquidType: string;
     chemicalName: string;
     area: number | string;
     volume: number | string;
     duration: string;
-    note: string;
+    other: string;
 }
 
 interface User {
@@ -92,10 +92,7 @@ export default function HistoryPage() {
                     throw new Error("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
                 }
 
-                const withId: HistoryItem[] = json.map((item, index): HistoryItem => ({
-                    ...item,
-                    id: index + 1,
-                }));
+                const withId: HistoryItem[] = json;
 
                 setData(withId);
                 setCurrentPage(1);
@@ -116,7 +113,7 @@ export default function HistoryPage() {
     }, [router, selectedRobot, startDate, endDate]);
 
     const filteredData = data.filter((row) => {
-        const matchType = filter === "ทั้งหมด" || row.category === filter;
+        const matchType = filter === "ทั้งหมด" || row.liquidType === filter;
         const rowDate = new Date(row.date);
         const matchStart = !startDate || rowDate >= new Date(startDate);
         const matchEnd = !endDate || rowDate <= new Date(endDate);
@@ -128,14 +125,52 @@ export default function HistoryPage() {
         currentPage * itemsPerPage
     );
 
-    const handleSave = () => {
-        if (!editItem) return;
-        const updatedData = data.map((item) =>
-            item.id === editItem.id ? { ...item, ...editItem } : item
-        );
-        setData(updatedData);
-        setEditItem(null);
+    const handleSave = async () => {
+        if (!editItem || !editItem._id) return;
+
+        const { _id, plantType, liquidType, chemicalName, area, other } = editItem;
+
+        const updatePayload = {
+            _id,
+            plantType,
+            liquidType,
+            chemicalName,
+            area,
+            other,
+        };
+
+        try {
+            const response = await fetch(`/robot/history/${_id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                credentials: 'include',
+                body: JSON.stringify(updatePayload),
+            });
+
+            if (!response.ok) {
+                throw new Error("บันทึกข้อมูลล้มเหลว");
+            }
+
+            const result = await response.json();
+            const updatedItem = result.iotData?.data;
+
+            if (!updatedItem || !updatedItem._id) {
+                throw new Error("ข้อมูลอัปเดตไม่ถูกต้อง");
+            }
+
+            const updatedData = data.map((item) =>
+                item._id === updatedItem._id ? updatedItem : item
+            );
+
+            setData(updatedData);
+            setEditItem(null);
+        } catch (error) {
+            console.error("เกิดข้อผิดพลาดในการอัปเดต:", error);
+            alert(error instanceof Error ? error.message : "ไม่สามารถบันทึกข้อมูลได้");
+        }
     };
+
+
 
     const downloadCSV = () => {
         const headers = [
@@ -143,8 +178,8 @@ export default function HistoryPage() {
             "พื้นที่ (ไร่)", "ปริมาณ (ลิตร)", "ระยะเวลา", "หมายเหตุ"
         ];
         const rows = filteredData.map(row => [
-            row.date, row.plantType, row.category, row.chemicalName,
-            row.area, row.volume, row.duration, row.note
+            row.date, row.plantType, row.liquidType, row.chemicalName,
+            row.area, row.volume, row.duration, row.other
         ]);
 
         const csvContent = [
@@ -251,15 +286,15 @@ export default function HistoryPage() {
                                     </thead>
                                     <tbody>
                                         {paginatedData.map((row) => (
-                                            <tr key={row.id}>
+                                            <tr key={row._id}>
                                                 <td>{toThaiDatetimeString(row.date)}</td>
                                                 <td>{row.plantType}</td>
-                                                <td>{row.category}</td>
+                                                <td>{row.liquidType}</td>
                                                 <td>{row.chemicalName}</td>
                                                 <td>{row.area}</td>
                                                 <td>{row.volume}</td>
                                                 <td>{row.duration}</td>
-                                                <td>{row.note}</td>
+                                                <td>{row.other}</td>
                                                 <td>
                                                     <button className="btn-editItem" onClick={() => setEditItem(row)}>
                                                         <span className="material-symbols-outlined">edit</span>
@@ -285,16 +320,7 @@ export default function HistoryPage() {
                             <Dialog className="edit-dialog" open={!!editItem} onClose={() => setEditItem(null)}>
                                 <DialogTitle>แก้ไขข้อมูล</DialogTitle>
                                 <DialogContent>
-                                    <TextField
-                                        label="วันที่"
-                                        type="date"
-                                        value={editItem?.date || ""}
-                                        onChange={(e) =>
-                                            setEditItem((prev) => ({ ...prev, date: e.target.value }))
-                                        }
-                                        fullWidth
-                                        margin="dense"
-                                    />
+                                    
                                     <TextField
                                         label="ชนิดพืช"
                                         value={editItem?.plantType || ""}
@@ -306,9 +332,9 @@ export default function HistoryPage() {
                                     />
                                     <TextField
                                         label="ประเภทของเหลว"
-                                        value={editItem?.category || ""}
+                                        value={editItem?.liquidType || ""}
                                         onChange={(e) =>
-                                            setEditItem((prev) => ({ ...prev, category: e.target.value }))
+                                            setEditItem((prev) => ({ ...prev, liquidType: e.target.value }))
                                         }
                                         fullWidth
                                         margin="dense"
@@ -332,30 +358,12 @@ export default function HistoryPage() {
                                         fullWidth
                                         margin="dense"
                                     />
-                                    <TextField
-                                        label="ปริมาณ (ลิตร)"
-                                        type="number"
-                                        value={editItem?.volume || ""}
-                                        onChange={(e) =>
-                                            setEditItem((prev) => ({ ...prev, volume: Number(e.target.value) }))
-                                        }
-                                        fullWidth
-                                        margin="dense"
-                                    />
-                                    <TextField
-                                        label="ระยะเวลา"
-                                        value={editItem?.duration || ""}
-                                        onChange={(e) =>
-                                            setEditItem((prev) => ({ ...prev, duration: e.target.value }))
-                                        }
-                                        fullWidth
-                                        margin="dense"
-                                    />
+                                    
                                     <TextField
                                         label="หมายเหตุ"
-                                        value={editItem?.note || ""}
+                                        value={editItem?.other || ""}
                                         onChange={(e) =>
-                                            setEditItem((prev) => ({ ...prev, note: e.target.value }))
+                                            setEditItem((prev) => ({ ...prev, other: e.target.value }))
                                         }
                                         fullWidth
                                         margin="dense"

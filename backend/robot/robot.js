@@ -265,7 +265,7 @@ router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
 });
 
 // GET /robot/sensor-data/:robot_id/latest10
-router.get('/sensor-data/:robot_id/latest10', authenticateToken, async (req, res) => {
+router.get("/sensor-data/:robot_id/latest10", authenticateToken, async (req, res) => {
   const robotId = parseInt(req.params.robot_id, 10);
   const userId = req.userId;
   const isAdmin = req.isAdmin;
@@ -611,14 +611,15 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
     const { usageHistory } = HistoryData.data.data;
     res.json(
       (usageHistory || []).map(log => ({
+        _id: log._id,
         date: log.timestamp,
         plantType: log.plantType,
-        category: log.liquidType,
+        liquidType: log.liquidType,
         chemicalName: log.chemicalName,
         area: log.area,
         volume: log.groupedUsage || 0,     
         duration: log.groupedTime || 0,   
-        note: log.other || "",
+        other: log.other || "",
       }))
     );
     
@@ -628,6 +629,37 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
     }
     console.error("เกิดข้อผิดพลาดในการโหลดข้อมูล", error);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการโหลดข้อมูล" });
+  }
+});
+
+router.put("/history/:id", authenticateToken, async (req, res) => {
+  const historyId = req.params.id;
+  const updateData = req.body;
+
+
+  if (!historyId) {
+    return res.status(400).json({ success: false, message: "Missing historyId" });
+  }
+
+  console.log(`🔄 Updating history ID: ${historyId} with data:`, updateData);
+
+  try {
+    const pgClient = await db.connect();
+
+    try {
+      // ส่งข้อมูลไปยัง IoT Server (MongoDB)
+      const iotResponse = await axios.put(`${API_SERVER_URL}/api/mongo-history/${historyId}`,
+        updateData
+      );
+
+      // สมมุติว่า IoT server ตอบกลับเป็น `{ success: true, data: ... }`
+      res.json({ success: true, iotData: iotResponse.data });
+    } finally {
+      pgClient.release();
+    }
+  } catch (error) {
+    console.error("Error in proxy PUT /api/history/:id:", error.message);
+    res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" });
   }
 });
 

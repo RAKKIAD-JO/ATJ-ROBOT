@@ -1,13 +1,13 @@
 "use client";
 
-import { BeatLoader } from "react-spinners";
+import { RingLoader } from "react-spinners";
 import "@/styles/loading.css";
 
-export default function Loading() {
+export default function Page() {
   return (
-    <main className="main-loading" style={{ textAlign: 'center', paddingTop: '5rem' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>ATJ ROBOT</h1>
-      <BeatLoader color="#36d7b7" size={20} />
+    <main className="main-loading">
+      <h1 className="title-loading">ATJROBOT</h1>
+      <RingLoader color="#17a2b8"  size={80}/>
     </main>
   );
 }
