@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import '@/styles/history.css';
+
 import {
     Dialog,
     DialogTitle,
@@ -70,53 +71,72 @@ export default function HistoryPage() {
         });
 
         if (!selectedRobot || !startDate || !endDate) return;
-        setLoading(true);
+            setLoading(true);
 
-        const fetchData = async () => {
+            const fetchData = async () => {
             try {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+
+                const startStr = start.toISOString();
+                const endStr = end.toISOString();
+
                 const res = await fetch(
-                    `/robot/chemical-usage-history?device_id=${selectedRobot.device_id}&startDate=${startDate}&endDate=${endDate}`,
-                    {
-                        method: 'GET',
-                        credentials: 'include',
-                    }
+                `/robot/chemical-usage-history?device_id=${selectedRobot.device_id}&startDate=${startStr}&endDate=${endStr}`,
+                {
+                    method: "GET",
+                    credentials: "include",
+                }
                 );
 
                 if (!res.ok) {
                     throw new Error("Failed to fetch robot data");
                 }
 
-                const json: HistoryItem[] = await res.json();
+                const json = await res.json();
+                console.log("json API:", json);
 
-                if (!json || json.length === 0) {
-                    throw new Error("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
+                if (json.length === 0) {
+                    setData([]);
+                    setErrorMessage("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
+                    return;
                 }
 
-                const withId: HistoryItem[] = json;
-
-                setData(withId);
+                setData(json);
                 setCurrentPage(1);
+                setErrorMessage("");
             } catch (error) {
-                if (error instanceof Error) {
-                    setErrorMessage(error.message);
-                } else {
-                    setErrorMessage("เกิดข้อผิดพลาดในการโหลดข้อมูล");
-                }
                 console.error("โหลดข้อมูลล้มเหลว:", error);
+                setErrorMessage(
+                error instanceof Error
+                    ? error.message
+                    : "เกิดข้อผิดพลาดในการโหลดข้อมูล"
+                );
+            } finally {
+                setLoading(false);
             }
-            finally {
-            setLoading(false);
-            }
-        };
+            };
 
-        fetchData();
+            fetchData();
+
     }, [router, selectedRobot, startDate, endDate]);
 
     const filteredData = data.filter((row) => {
         const matchType = filter === "ทั้งหมด" || row.liquidType === filter;
+
         const rowDate = new Date(row.date);
-        const matchStart = !startDate || rowDate >= new Date(startDate);
-        const matchEnd = !endDate || rowDate <= new Date(endDate);
+
+        const start = startDate ? new Date(startDate) : null;
+        if (start) start.setHours(0, 0, 0, 0);
+
+        const end = endDate ? new Date(endDate) : null;
+        if (end) end.setHours(23, 59, 59, 999);
+
+        const matchStart = !start || rowDate >= start;
+        const matchEnd = !end || rowDate <= end;
+
         return matchType && matchStart && matchEnd;
     });
 
@@ -169,8 +189,6 @@ export default function HistoryPage() {
             alert(error instanceof Error ? error.message : "ไม่สามารถบันทึกข้อมูลได้");
         }
     };
-
-
 
     const downloadCSV = () => {
         const headers = [
@@ -306,7 +324,7 @@ export default function HistoryPage() {
                                 </table>
                             </div>
 
-                            {filteredData.length > itemsPerPage && (
+                            {filteredData.length >= itemsPerPage && (
                                 <div className="pagination-container">
                                     <Pagination
                                         count={Math.ceil(filteredData.length / itemsPerPage)}

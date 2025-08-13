@@ -64,6 +64,7 @@
 
 .primaryBtn
 {
+    font-family: var(--font-kanit), sans-serif;
     padding: 12px 28px;
     border-radius: 30px;
     font-size: 1rem;

@@ -599,7 +599,6 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
       if (robotResult.rows.length === 0) {
         return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
-    
     } finally {
       pgClient.release();
     }
@@ -608,7 +607,8 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
       params: { device_id, startDate, endDate }
     });
 
-    const { usageHistory } = HistoryData.data.data;
+    const usageHistory = HistoryData.data.data?.usageHistory;
+
     res.json(
       (usageHistory || []).map(log => ({
         _id: log._id,
@@ -617,12 +617,12 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
         liquidType: log.liquidType,
         chemicalName: log.chemicalName,
         area: log.area,
-        volume: log.groupedUsage || 0,     
-        duration: log.groupedTime || 0,   
+        volume: log.groupedUsage || 0,
+        duration: log.groupedTime || 0,
         other: log.other || "",
       }))
     );
-    
+
   } catch (error) {
     if (error.response?.status === 404) {
       return res.status(404).json({ error: "Failed to fetch robot data" });

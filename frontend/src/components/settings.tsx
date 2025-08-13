@@ -252,7 +252,7 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-          <button className="save-button" onClick={handleSaveChanges}>Save Changes</button>
+          <button className="save-button" onClick={handleSaveChanges}>บันทึก</button>
         </div>
       </div>
     </main>

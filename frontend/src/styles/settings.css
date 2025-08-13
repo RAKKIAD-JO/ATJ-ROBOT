@@ -133,6 +133,7 @@
   
   /* ปุ่มบันทึก */
   .save-button {
+    font-family: var(--font-kanit), sans-serif;
     background-color: #88b7b9;
     color: white;
     padding: 12px 30px;

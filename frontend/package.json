@@ -17,6 +17,7 @@
     "boxicons": "^2.1.4",
     "chart.js": "^4.4.9",
     "cookie-parser": "^1.4.7",
+    "dayjs": "^1.11.13",
     "flatpickr": "^4.6.13",
     "multer": "^2.0.1",
     "next": "^15.3.3",
