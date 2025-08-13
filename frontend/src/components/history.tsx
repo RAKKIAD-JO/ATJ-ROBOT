@@ -90,6 +90,7 @@ export default function HistoryPage() {
                     credentials: "include",
                 }
                 );
+
                 const json = await res.json();
                 console.log("json API:", json);
 

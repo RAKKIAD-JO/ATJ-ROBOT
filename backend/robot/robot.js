@@ -577,7 +577,7 @@ router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
 });
 
 router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
-  let { device_id, startDate, endDate } = req.query;
+  const { device_id, startDate, endDate } = req.query;
   const userId = req.userId;
   const isAdmin = req.isAdmin;
 
@@ -607,11 +607,7 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
       params: { device_id, startDate, endDate }
     });
 
-    let usageHistory = HistoryData.data.data?.usageHistory;
-
-    if (!usageHistory && Array.isArray(HistoryData.data.data)) {
-      usageHistory = HistoryData.data.data;
-    }
+    const usageHistory = HistoryData.data.data?.usageHistory;
 
     res.json(
       (usageHistory || []).map(log => ({
