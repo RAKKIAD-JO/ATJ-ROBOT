@@ -453,13 +453,24 @@ router.get("/spray-logs", async (req, res) => {
   }
 
   try {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start.toDateString() === end.toDateString()) {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    }
+
     const dataLogs = await Esp32Data.find({
       device_id,
-      timestamp: { $gte: new Date(startDate), $lte: new Date(endDate) }
+      timestamp: { $gte: start, $lte: end }
     });
 
-    if (!dataLogs || dataLogs.length === 0){
-      return res.status(404).json({error : "NO Datas"})
+    if (!dataLogs || dataLogs.length === 0) {
+      return res.status(404).json({ error: "NO Datas" });
     }
 
     res.json({ success: true, data: dataLogs });
@@ -486,9 +497,14 @@ router.get("/chemical-usage-by-type", async (req, res) => {
 
   try {
     const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    if (start.toDateString() === end.toDateString()) {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    }
 
     const sensors = await Esp32Sensor.find({ 
       device_id, 
@@ -559,9 +575,14 @@ router.get("/chemical-usage-history", async (req, res) => {
 
   try {
     const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    if (start.toDateString() === end.toDateString()) {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    }
 
     const DataLogs = await Esp32Data.find({
       device_id,

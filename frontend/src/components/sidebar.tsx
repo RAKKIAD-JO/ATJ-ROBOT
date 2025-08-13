@@ -142,7 +142,7 @@ export default function Sidebar() {
     };
 
     if (pathname === "/") return null;
-    if (pathname === "/websocket") return null;
+    if (pathname === "/loading") return null;
 
     return (
         <div className="container">

@@ -577,7 +577,7 @@ router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
 });
 
 router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
-  const { device_id, startDate, endDate } = req.query;
+  let { device_id, startDate, endDate } = req.query;
   const userId = req.userId;
   const isAdmin = req.isAdmin;
 
@@ -599,7 +599,6 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
       if (robotResult.rows.length === 0) {
         return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
-    
     } finally {
       pgClient.release();
     }
@@ -608,7 +607,12 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
       params: { device_id, startDate, endDate }
     });
 
-    const { usageHistory } = HistoryData.data.data;
+    let usageHistory = HistoryData.data.data?.usageHistory;
+
+    if (!usageHistory && Array.isArray(HistoryData.data.data)) {
+      usageHistory = HistoryData.data.data;
+    }
+
     res.json(
       (usageHistory || []).map(log => ({
         _id: log._id,
@@ -617,12 +621,12 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
         liquidType: log.liquidType,
         chemicalName: log.chemicalName,
         area: log.area,
-        volume: log.groupedUsage || 0,     
-        duration: log.groupedTime || 0,   
+        volume: log.groupedUsage || 0,
+        duration: log.groupedTime || 0,
         other: log.other || "",
       }))
     );
-    
+
   } catch (error) {
     if (error.response?.status === 404) {
       return res.status(404).json({ error: "Failed to fetch robot data" });
