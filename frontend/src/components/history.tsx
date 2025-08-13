@@ -91,6 +91,10 @@ export default function HistoryPage() {
                 }
                 );
 
+                if (!res.ok) {
+                    throw new Error("Failed to fetch robot data");
+                }
+
                 const json = await res.json();
                 console.log("json API:", json);
 
