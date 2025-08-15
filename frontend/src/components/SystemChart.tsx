@@ -48,7 +48,12 @@ const SystemChart = ({ deviceId }: Props) => {
         console.log("Fetched sensor list:", sensorList);
         const formattedData = sensorList.map((item) => {
           const date = new Date(item.timestamp);
-          const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const timeStr = date.toLocaleTimeString("th-TH", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "UTC"
+          });
           return {
             battery: item.battery,
             flow: item.sprayRate,
@@ -95,9 +100,9 @@ const SystemChart = ({ deviceId }: Props) => {
           <YAxis label={{ value: "Value", angle: -90, position: "insideLeft" }} />
           <Tooltip />
           <Legend verticalAlign="top" height={36} />
-          <Line type="monotone" dataKey="battery" stroke="#ff7300" strokeWidth={2} name="Battery Level" />
-          <Line type="monotone" dataKey="flow" stroke="#387908" strokeWidth={2} name="Flow Rate" />
-          <Line type="monotone" dataKey="water" stroke="#8884d8" strokeWidth={2} name="Water Level" />
+          <Line type="monotone" dataKey="battery" stroke="#28a745" strokeWidth={2} name="Battery Level" />
+          <Line type="monotone" dataKey="flow" stroke="#17a2b8" strokeWidth={2} name="Flow Rate" />
+          <Line type="monotone" dataKey="water" stroke="#f5732dff" strokeWidth={2} name="Water Level" />
         </LineChart>
       </ResponsiveContainer>
     </div>
