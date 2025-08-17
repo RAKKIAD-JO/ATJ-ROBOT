@@ -52,11 +52,20 @@ export default function HistoryPage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(false);
 
+    const isValidDate = (d: Date) => d instanceof Date && !isNaN(d.getTime());
     // ฟังก์ตรวรสอบวัน
     const filterByDate = (rowDate: string, startDate: string, endDate: string): boolean => {
-        const rowKey = toUTCDateKey(new Date(rowDate));
-        const startKey = toUTCDateKey(new Date(startDate));
-        const endKey = toUTCDateKey(new Date(endDate));
+        const row = new Date(rowDate);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (!isValidDate(row) || !isValidDate(start) || !isValidDate(end)) {
+            return false;
+        }
+
+        const rowKey = toUTCDateKey(row);
+        const startKey = toUTCDateKey(start);
+        const endKey = toUTCDateKey(end);
 
         return rowKey >= startKey && rowKey <= endKey;
     };
@@ -88,9 +97,17 @@ export default function HistoryPage() {
 
         const fetchData = async () => {
             try {
+                if (!selectedRobot || !startDate || !endDate) return;
+
                 const start = new Date(startDate);
-                start.setHours(0, 0, 0, 0);
                 const end = new Date(endDate);
+
+                if (!isValidDate(start) || !isValidDate(end)) {
+                    setErrorMessage("กรุณาเลือกวันที่ที่ถูกต้อง");
+                    return;
+                }
+
+                start.setHours(0, 0, 0, 0);
                 end.setHours(23, 59, 59, 999);
 
                 const startStr = start.toISOString();
@@ -136,7 +153,8 @@ export default function HistoryPage() {
     }, [router, selectedRobot, startDate, endDate]);
 
     const toUTCDateKey = (date: Date): string => {
-        return date.toISOString().split('T')[0]; // ได้ 'YYYY-MM-DD'
+        if (!isValidDate(date)) return "";
+        return date.toISOString().split('T')[0];
     };
 
     // กรองข้อมูลตาม liquidType และช่วงวันที่
@@ -394,8 +412,8 @@ export default function HistoryPage() {
                                 />
                             </DialogContent>
                             <DialogActions>
-                                <Button onClick={() => setEditItem(null)}>ยกเลิก</Button>
-                                <Button variant="contained" onClick={handleSave}>บันทึก</Button>
+                                <Button type="button" onClick={() => setEditItem(null)}>ยกเลิก</Button>
+                                <Button type="button" variant="contained" onClick={handleSave}>บันทึก</Button>
                             </DialogActions>
                         </Dialog>
                     </>
