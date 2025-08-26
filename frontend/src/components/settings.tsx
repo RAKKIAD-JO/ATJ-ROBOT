@@ -20,6 +20,7 @@ export default function SettingsPage() {
 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [modalMessage, setModalMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/users/profile", {
@@ -47,6 +48,15 @@ export default function SettingsPage() {
         setErrorMessage('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
       });
   }, [router]);
+
+  const showModal = (message: string) => {
+    setModalMessage(message);
+  };
+
+  const closeModal = () => {
+    setModalMessage(null);
+    window.location.reload(); 
+  };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -123,8 +133,8 @@ export default function SettingsPage() {
       }
 
       setErrorMessage('');
-      alert('อัปเดตข้อมูลสำเร็จ');
-      window.location.reload();
+      showModal('อัปเดตข้อมูลสำเร็จ');
+
     } catch (error) {
       console.error('Error updating profile:', error);
       setErrorMessage('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
@@ -255,6 +265,15 @@ export default function SettingsPage() {
           <button className="save-button" onClick={handleSaveChanges}>บันทึก</button>
         </div>
       </div>
+      {modalMessage && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <button className="modal-close" onClick={closeModal}>×</button>
+            <p>{modalMessage}</p>
+            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

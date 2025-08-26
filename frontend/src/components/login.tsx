@@ -17,17 +17,26 @@ export default function Home() {
   });
 
   const [confirmPassword, setConfirmPassword] = useState(''); 
+  const [modalMessage, setModalMessage] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const showModal = (message: string) => {
+    setModalMessage(message);
+  };
+
+  const closeModal = () => {
+    setModalMessage(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (step === "register" && formData.passWord !== confirmPassword) {
-      alert("Passwords do not match!");
+      showModal("❌ รหัสผ่านไม่ตรงกัน");
       return;
     }
 
@@ -49,14 +58,14 @@ export default function Home() {
           throw new Error(data.message || "Registration failed");
         }
 
-        alert("ลงทะเบียนสำเร็จ กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ");
+        showModal("ลงทะเบียนสำเร็จ กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ");
         setStep("login"); 
 
       } catch (error) {
         if (error instanceof Error) {
-          alert("❌ " + error.message);
+          showModal("❌ " + error.message);
         } else {
-          alert("❌ Unknown error");
+          showModal("❌ Unknown error");
         }
       }
     } else {
@@ -90,11 +99,11 @@ export default function Home() {
           ...data.user,
           name: `${data.user.firstName} ${data.user.lastName}` 
         };
-        
-        if(userWithName.isAdmin) {
+
+        if (userWithName.isAdmin) {
           window.location.href = "/admin";
         } else {
-            window.location.href = "/home";
+          window.location.href = "/home";
         }
 
       } catch (error) {
@@ -151,6 +160,17 @@ export default function Home() {
           <h1>welcome ATJ robot</h1>
           <img src="/logomine1.png" alt="Login" />
         </div>
+
+        {/* ✅ Modal Component */}
+        {modalMessage && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <button className="modal-close" onClick={closeModal}>×</button>
+              <p>{modalMessage}</p>
+              <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
