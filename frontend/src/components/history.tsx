@@ -122,7 +122,7 @@ export default function HistoryPage() {
                 );
 
                 if (!res.ok) {
-                    throw new Error("Failed to fetch robot data");
+                    throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
                 }
 
                 const json = await res.json();
@@ -130,7 +130,7 @@ export default function HistoryPage() {
 
                 if (json.length === 0) {
                     setData([]);
-                    setErrorMessage("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
+                    setErrorMessage("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
                     return;
                 }
 

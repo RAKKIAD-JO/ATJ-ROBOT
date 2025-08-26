@@ -11,7 +11,15 @@ export default function OtpPage() {
   const [email, setEmail] = useState(""); // อีเมลสำหรับส่ง OTP
   const [enteredOtp, setEnteredOtp] = useState(""); // OTP ที่ผู้ใช้กรอก
   const [loading, setLoading] = useState(false); // แสดงสถานะ loading
+  const [modalMessage, setModalMessage] = useState<string | null>(null);
+  
+  const showModal = (message: string) => {
+    setModalMessage(message);
+  };
 
+  const closeModal = () => {
+    setModalMessage(null);
+  };
   // 🔶 ส่ง OTP ไปยังอีเมลผ่าน API
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,14 +37,14 @@ export default function OtpPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message); // "ส่ง OTP เรียบร้อยแล้ว..."
+        showModal(data.message); // "ส่ง OTP เรียบร้อยแล้ว..."
         setOtpSent(true);
       } else {
-        alert(data.message); // เช่น "ไม่พบอีเมลนี้ในระบบ"
+        showModal(data.message); // เช่น "ไม่พบอีเมลนี้ในระบบ"
       }
     } catch (error) {
       console.error("Error sending OTP:", error);
-      alert("เกิดข้อผิดพลาดในการส่ง OTP");
+      showModal("เกิดข้อผิดพลาดในการส่ง OTP");
     } finally {
       setLoading(false);
     }
@@ -59,14 +67,14 @@ export default function OtpPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message); 
+        showModal(data.message);
         router.push("/reset-password?email=" + encodeURIComponent(email));
       } else {
-        alert(data.message); 
+        showModal(data.message);
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      alert("เกิดข้อผิดพลาดในการตรวจสอบ OTP");
+      showModal("เกิดข้อผิดพลาดในการตรวจสอบ OTP");
     } finally {
       setLoading(false);
     }
@@ -115,6 +123,16 @@ export default function OtpPage() {
           )}
         </div>
       </div>
+      {/* ✅ Modal Component */}
+        {modalMessage && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <button className="modal-close" onClick={closeModal}>×</button>
+              <p>{modalMessage}</p>
+              <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

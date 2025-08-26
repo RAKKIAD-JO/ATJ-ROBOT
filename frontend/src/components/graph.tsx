@@ -80,7 +80,7 @@ export default function Graph() {
       if (!res.ok || !contentType?.includes("application/json")) {
         console.error("Invalid response:", text);
         setSprayCounts([]);
-        throw new Error("Failed to fetch robot data");
+        throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
       }
 
       const data = JSON.parse(text);
@@ -113,7 +113,7 @@ export default function Graph() {
       if (!res.ok || !contentType?.includes("application/json")) {
         console.error("Invalid response:", text);
         setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
-        throw new Error("Failed to fetch robot data");
+        throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
       }
 
       const data = JSON.parse(text);
