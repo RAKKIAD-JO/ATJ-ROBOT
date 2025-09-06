@@ -44,7 +44,7 @@ export async function fetchLatestSensorData(robotId: number): Promise<RawSensorD
     credentials: 'include',
   });
   if (!res.ok) {
-    throw new Error("Failed to fetch sensor data");
+    throw new Error("ไม่พบข้อมูลของหุ่นยนต์");
   }
   const data: RawSensorData[] = await res.json(); 
   return data;
@@ -55,7 +55,7 @@ export async function fetchMyRobots() {
     method: 'GET',
     credentials: 'include',
   });
-  if (!res.ok) throw new Error('Failed to fetch robots');
+  if (!res.ok) throw new Error('ไม่พบข้อมูลของหุ่นยนต์');
   return res.json();
 }
 
@@ -67,7 +67,7 @@ export async function fetchSensorData(robotId: number): Promise<SensorDataType> 
       'Content-Type': 'application/json',
     },
   });
-  if (!res.ok) throw new Error('Failed to fetch sensor data');
+  if (!res.ok) throw new Error('ไม่พบข้อมูลของหุ่นยนต์');
   return res.json();
 }
 
@@ -77,7 +77,7 @@ export async function fetchRobotData(robotId: number): Promise<Esp32DataType> {
     credentials: 'include',
   });
 
-  if (!res.ok) throw new Error('Failed to fetch robot data');
+  if (!res.ok) throw new Error('ไม่พบข้อมูลของหุ่นยนต์');
   const json = await res.json();
   const data: Esp32DataType = {
     ...json.data,

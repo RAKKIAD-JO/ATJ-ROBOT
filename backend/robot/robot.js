@@ -208,7 +208,6 @@ router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
           axios.get(`${API_SERVER_URL}/api/sensor-data/${device_id}`)
         ]);
 
-        // ตรวจสอบการตอบกลับจาก API
         if (!statusResponse.data.success) {
           return res.status(404).json({ error: "ไม่พบอุปกรณ์ในระบบ" });
         }

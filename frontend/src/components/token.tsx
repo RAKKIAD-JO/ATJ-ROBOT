@@ -10,6 +10,16 @@ export default function AssignRobot() {
     const [robotName, setRobotName] = useState("");
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const [modalMessage, setModalMessage] = useState<string | null>(null);
+
+    const showModal = (message: string) => {
+        setModalMessage(message);
+    };
+
+    const closeModal = () => {
+        setModalMessage(null);
+        window.location.reload();
+    };
 
     useEffect(() => {
         if (!window.location.search.includes('reloaded=1')) {
@@ -34,7 +44,7 @@ export default function AssignRobot() {
     const handleAssign = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!robotToken || !robotName) {
-            alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+            showModal("กรุณากรอกข้อมูลให้ครบถ้วน");
             return;
         }
 
@@ -56,15 +66,15 @@ export default function AssignRobot() {
             const data = await res.json();
 
             if (res.ok && data.success) {
-                alert(data.message || "เชื่อมต่อสำเร็จ!");
+                showModal(data.message || "เชื่อมต่อสำเร็จ!");
                 router.refresh();
                 router.push("/home");
             } else {
-                alert(data.message || "ไม่สามารถเชื่อมต่อหุ่นยนต์ได้");
+                showModal(data.message || "ไม่สามารถเชื่อมต่อหุ่นยนต์ได้");
             }
         } catch (error) {
             console.error("เกิดข้อผิดพลาด:", error);
-            alert("เกิดข้อผิดพลาดที่ไม่คาดคิด");
+            showModal("เกิดข้อผิดพลาดที่ไม่คาดคิด");
         } finally {
             setLoading(false);
         }
@@ -109,6 +119,21 @@ export default function AssignRobot() {
                     <img src="/logomine1.png" alt="Robot" />
                 </div>
             </div>
+            {modalMessage && (
+                <div className="modal-overlay">
+                <div className="modal-box">
+                    <button className="modal-close" onClick={closeModal}>×</button>
+                    <div className="checkmark-animation">
+                    <svg viewBox="0 0 52 52" className="checkmark">
+                        <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                        <path className="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
+                    </svg>
+                    </div>
+                    <p>{modalMessage}</p>
+                    <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+                </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -125,14 +125,20 @@ export default function OtpPage() {
       </div>
       {/* ✅ Modal Component */}
         {modalMessage && (
-          <div className="modal-overlay">
-            <div className="modal-box">
-              <button className="modal-close" onClick={closeModal}>×</button>
-              <p>{modalMessage}</p>
-              <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <button className="modal-close" onClick={closeModal}>×</button>
+            <div className="checkmark-animation">
+              <svg viewBox="0 0 52 52" className="checkmark">
+                <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                <path className="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
+              </svg>
             </div>
+            <p>{modalMessage}</p>
+            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 }

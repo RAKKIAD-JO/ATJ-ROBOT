@@ -95,12 +95,13 @@
   z-index: 9999;
 }
 
-/* Modal Box */
 .modal-box {
   background: #fff;
   padding: 20px 30px;
   border-radius: 10px;
+  border-radius: 2.8rem;
   width: 350px;
+  height: 200px;
   text-align: center;
   position: relative;
   animation: fadeIn 0.3s ease;
@@ -112,9 +113,9 @@
   margin-bottom: 20px;
 }
 
-/* Close Button (X) */
 .modal-close {
   position: absolute;
+  padding: 10px;
   top: 10px;
   right: 15px;
   background: none;
@@ -124,23 +125,67 @@
   color: #333;
 }
 
-/* OK Button */
+.modal-close:hover {
+    color: #b81717;
+}
+
 .modal-ok {
-  padding: 8px 16px;
-  background: #4caf50;
+  font-family: var(--font-kanit), sans-serif;
+  width: 30%;
+  height: 37px;
+  padding: 5px 10px;
+  background: #88b7b9;
   color: #fff;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
 }
+
 
 .modal-ok:hover {
-  background: #45a049;
+  background: #17a2b8;
 }
 
-/* Animation */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
+}
+
+.checkmark-animation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.checkmark {
+  width: 56px;
+  height: 56px;
+  display: block;
+  stroke-width: 3;
+  stroke: #17a2b8;
+  stroke-miterlimit: 10;
+  border-radius: 50%;
+  background: #fff;
+}
+.checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 3;
+  stroke: #17a2b8;
+  fill: none;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.checkmark-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  stroke: #17a2b8;
+  stroke-width: 3;
+  fill: none;
+  animation: stroke 0.4s 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
 }

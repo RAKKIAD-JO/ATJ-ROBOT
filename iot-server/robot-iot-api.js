@@ -168,8 +168,8 @@ router.post('/esp32-sensor', authenticateDevice, async (req, res) => {
 
     await newSensorData.save();
     res.status(200).send('Sensor data saved successfully!');
-  } catch (err) {
-    console.error('Error saving sensor data:', err);
+  } catch (error) {
+    console.error('Error saving sensor data:', error);
     res.status(500).send('Server error!');
   }
 });
@@ -371,10 +371,10 @@ router.get('/sensor-data/:device_id/latest10', async (req, res) => {
   }
 
   try {
-    const data = await Esp32Sensor.find({ device_id }).sort({ timestamp: -1 }).limit(10).select('battery sprayRate waterLevel pumpStatus timestamp').lean();
+    const data = await Esp32Sensor.find({ device_id }).sort({ timestamp: -1 }).limit(10).select().lean();
 
     if (data.length === 0) {
-      return res.status(404).json({ error: "ไม่พบข้อมูลเซ็นเซอร์" });
+      return res.status(404).json({ error: "ไม่พบข้อมูลเซ็นเซอร์" });  
     }
 
     return res.json({

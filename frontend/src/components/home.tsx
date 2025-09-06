@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState  } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
 import "@/styles/home.css";
 import 'animate.css';
 import SystemChart from "@/components/SystemChart";
-import { fetchSensorData , SensorDataType ,fetchRobotData ,Esp32DataType } from "../app/api/robot"; 
+import { fetchSensorData, SensorDataType, fetchRobotData, Esp32DataType } from "../app/api/robot";
 import DonutChart from "@/components/donutChart";
 import Loading from "@/components/loading";
+
 
 interface User {
   firstName: string;
@@ -20,112 +21,129 @@ interface User {
 }
 
 export default function Home() {
-    const { selectedRobot } = useSelectedRobot();
-    const router = useRouter();
-    const [errorMessage, setErrorMessage] = useState<string>("");
-    const [sensorData, setSensorData] = useState<SensorDataType | null>(null);
-    const [loadingSensor, setLoadingSensor] = useState(false);
-    const [loadingDataType, setLoadingDataType] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [user, setUser] = useState<User | null>(null);
-    const [dataType, setDataType] = useState<Esp32DataType | null>(null);
+  const { selectedRobot } = useSelectedRobot();
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [sensorData, setSensorData] = useState<SensorDataType | null>(null);
+  const [loadingSensor, setLoadingSensor] = useState(false);
+  const [loadingDataType, setLoadingDataType] = useState(false);
+  //const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [dataType, setDataType] = useState<Esp32DataType | null>(null);
+  const [modalMessage, setModalMessage] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetch("/api/users/profile", {
-          method: "GET",
-          credentials: "include", 
-        })
-        .then(async (res) => {
-            if (res.status === 403 || res.status === 401) {
-                setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
-                router.replace("/");
-                return;
-            }
-            const data = await res.json();
-            setUser(data);
-        })
-        .catch((error) => {
-            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
-        });
-    }, [router]);
+  useEffect(() => {
+    fetch("/api/users/profile", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then(async (res) => {
+        if (res.status === 403 || res.status === 401) {
+          setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+          router.replace("/");
+          return;
+        }
+        const data = await res.json();
+        setUser(data);
+      })
+      .catch((error) => {
+        setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
+      });
+  }, [router]);
 
-    useEffect(() => {
-      if (!selectedRobot?.robot_id) {
+  useEffect(() => {
+    if (!selectedRobot?.robot_id) {
+      setSensorData(null);
+      setDataType(null);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      fetchSensorData(selectedRobot.robot_id)
+        .then(setSensorData)
+        .catch(console.error);
+
+      fetchRobotData(selectedRobot.robot_id)
+        .then(setDataType)
+        .catch(console.error);
+    }, 30000);// 30 วินาที
+
+
+    // โหลดข้อมูลเซ็นเซอร์
+    const loadSensor = async () => {
+      setLoadingSensor(true);
+      setErrorMessage(null);
+      try {
+        const data = await fetchSensorData(selectedRobot.robot_id);
+        setSensorData(data);
+
+      } catch (error) {
+        if (error instanceof Error) {
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage("เกิดข้อผิดพลาดในการโหลดข้อมูลเซ็นเซอร์");
+        }
         setSensorData(null);
-        setDataType(null);
-        return;
+      } finally {
+        setLoadingSensor(false);
       }
+    };
 
-      const intervalId = setInterval(() => {
-        fetchSensorData(selectedRobot.robot_id)
-          .then(setSensorData)
-          .catch(console.error);
-
-        fetchRobotData(selectedRobot.robot_id)
-          .then(setDataType)
-          .catch(console.error);
-      }, 30000);// 30 วินาที
-
-
-      // โหลดข้อมูลเซ็นเซอร์
-      const loadSensor = async () => {
-        setLoadingSensor(true);
-        setError(null);
-        try {
-          const data = await fetchSensorData(selectedRobot.robot_id);
-          setSensorData(data);
-          
-        } catch (error) {
-          if (error instanceof Error) {
-            setError(error.message);
-          } else {
-            setError("เกิดข้อผิดพลาดในการโหลดข้อมูลเซ็นเซอร์");
-          }
-          setSensorData(null);
-        } finally {
-          setLoadingSensor(false);
+    // โหลดข้อมูลการฉีดพ่น
+    const loadDataType = async () => {
+      setLoadingDataType(true);
+      setErrorMessage(null);
+      try {
+        const data = await fetchRobotData(selectedRobot.robot_id);
+        setDataType(data);
+      } catch (error) {
+        if (error instanceof Error) {
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage("เกิดข้อผิดพลาดในการโหลดข้อมูลชนิดพืช");
         }
-      };
+        setDataType(null);
+      } finally {
+        setLoadingDataType(false);
+      }
+    };
 
-      // โหลดข้อมูลการฉีดพ่น
-      const loadDataType = async () => {
-        setLoadingDataType(true);
-        setError(null);
-        try {
-          const data = await fetchRobotData(selectedRobot.robot_id);
-          setDataType(data);
-        } catch (error) {
-          if (error instanceof Error) {
-            setError(error.message);
-          } else {
-            setError("เกิดข้อผิดพลาดในการโหลดข้อมูลชนิดพืช");
-          }
-          setDataType(null);
-        } finally {
-          setLoadingDataType(false);
-        }
-      };
+    loadSensor();
+    loadDataType();
 
-      loadSensor();
-      loadDataType();
+    return () => clearInterval(intervalId);
+  }, [selectedRobot]);
 
-      return () => clearInterval(intervalId);
-    }, [selectedRobot]);
+  const showModal = (message: string) => {
+    setModalMessage(message);
+  };
+
+  const closeModal = () => {
+    setModalMessage(null);
+  };
+
+  useEffect(() => {
+    if (errorMessage) {
+      showModal(errorMessage);
+    } else {
+      setModalMessage(null);
+    }
+  }, [errorMessage]);
 
   const batteryPercent = Number(sensorData?.battery) || 0;
   const flowRatePercent = Number(sensorData?.sprayRate) || 0;
   const waterLevelPercent = Number(sensorData?.waterLevel) || 0;
 
-    return (
+  return (
     <main className='main-home'>
       <div className="dashboard">
         <h1>Dashboard</h1>
         {!selectedRobot ? (
           <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
         ) : loadingSensor || loadingDataType ? (
-          <Loading /> 
-        ) : error ? (
-          <p style={{ color: 'red' }}>{error}</p>
+          <Loading />
+        ) : errorMessage ? (
+          <p>{errorMessage}</p>
         ) : !sensorData ? (
           <p>ยังไม่มีข้อมูล sensor สำหรับหุ่นยนต์นี้</p>
         ) : (
@@ -151,7 +169,7 @@ export default function Home() {
                     <p>Total</p>
                   </div>
                   <div className="batter-value">
-                    <DonutChart label="แบตเตอรี่" value={batteryPercent} color="rgba(0, 200, 83, 0.7)" mode="remaining"/>
+                    <DonutChart label="แบตเตอรี่" value={Number(batteryPercent.toFixed(2))} color="rgba(0, 200, 83, 0.7)" mode="remaining" />
                   </div>
                 </div>
               </div>
@@ -166,7 +184,7 @@ export default function Home() {
                     <p>Total</p>
                   </div>
                   <div className="flow-water-value">
-                    <DonutChart label="อัตราไหล" value={flowRatePercent} color="rgba(54, 162, 235, 0.7)" mode="usage"/>
+                    <DonutChart label="อัตราไหล" value={Number(flowRatePercent.toFixed(2))} color="rgba(54, 162, 235, 0.7)" mode="usage" />
                   </div>
                 </div>
               </div>
@@ -181,7 +199,7 @@ export default function Home() {
                     <p>Total</p>
                   </div>
                   <div className="leval-water-value">
-                    <DonutChart label="ระดับน้ำ" value={waterLevelPercent} color="rgba(255, 193, 7, 0.7)" mode="remaining"/>
+                    <DonutChart label="ระดับน้ำ" value={Number(waterLevelPercent.toFixed(2))} color="rgba(255, 193, 7, 0.7)" mode="remaining" />
                   </div>
                 </div>
               </div>
@@ -231,8 +249,24 @@ export default function Home() {
             </div>
           </>
         )}
-        {errorMessage && <div className="error-message">{errorMessage}</div>}
       </div>
+      {/* Modal */}
+      {modalMessage && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <button className="modal-close" onClick={closeModal}>×</button>
+            <div className="crossmark-animation">
+              <svg viewBox="0 0 52 52" className="crossmark">
+                <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
+                <path className="crossmark-line1" d="M16 16 L36 36" />
+                <path className="crossmark-line2" d="M36 16 L16 36" />
+              </svg>
+            </div>
+            <p>{modalMessage}</p>
+            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

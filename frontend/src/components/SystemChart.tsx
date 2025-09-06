@@ -76,7 +76,7 @@ const SystemChart = ({ deviceId }: Props) => {
     };
 
     if (deviceId) {
-      loadData(); // โหลดทันทีครั้งแรก
+      loadData(); 
       intervalId = setInterval(() => {
         loadData();
       }, 30000); // ทุก 30 วินาที

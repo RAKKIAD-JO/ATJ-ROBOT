@@ -43,6 +43,7 @@ export default function Graph() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [modalMessage, setModalMessage] = useState<string | null>(null);
 
   useEffect(() => {
         fetch("/api/users/profile", {
@@ -128,11 +129,27 @@ export default function Graph() {
     }
     
   }
+  
+  const showModal = (message: string) => {
+    setModalMessage(message);
+  };
+
+  const closeModal = () => {
+    setModalMessage(null);
+  };
 
   useEffect(() => {
     fetchSprayCounts();
     fetchUsageByType();
   }, [selectedRobot, startDate, endDate]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      showModal(errorMessage);
+    } else {
+      setModalMessage(null);
+    }
+  }, [selectedRobot, errorMessage]);
 
   const dates = sprayCounts.map((d) => d.date);
   const waterSeries = sprayCounts.map((d) => d.water);
@@ -156,7 +173,7 @@ export default function Graph() {
           ) : loading ? (
             <Loading />
           ) : errorMessage ? (
-            <p style={{ color: "red" }}>{errorMessage}</p>
+            <p>{errorMessage}</p>
           ) : (
             <>
             <div className="selected-robot-info">
@@ -256,6 +273,22 @@ export default function Graph() {
             </>
             )}
       </section>
+        {modalMessage && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <button className="modal-close" onClick={closeModal}>×</button>
+              <div className="crossmark-animation">
+                <svg viewBox="0 0 52 52" className="crossmark">
+                  <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
+                  <path className="crossmark-line1" d="M16 16 L36 36" />
+                  <path className="crossmark-line2" d="M36 16 L16 36" />
+                </svg>
+              </div>
+              <p>{modalMessage}</p>
+              <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+            </div>
+          </div>
+        )}
     </main>
   );
 }

@@ -10,16 +10,26 @@ export default function ResetPassword() {
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [modalMessage, setModalMessage] = useState<string | null>(null);
+
+    const showModal = (message: string) => {
+        setModalMessage(message);
+    };
+
+    const closeModal = () => {
+        setModalMessage(null);
+        window.location.reload();
+    };
 
     const handlerResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (newPassword !== confirmPassword) {
-            alert("รัหสผ่านไม่ตรงกัน");
+            showModal("รัหสผ่านไม่ตรงกัน");
             return;
         }
         if (!email) {
-            alert("ไม่พบอีเมล");
+            showModal("ไม่พบอีเมล");
             return;
         }
         setLoading(true);
@@ -35,14 +45,14 @@ export default function ResetPassword() {
 
             const data = await response.json();
             if (response.ok) {
-                alert("รีเซ็ตรหัสผ่านสำเร็จ!");
+                showModal("รีเซ็ตรหัสผ่านสำเร็จ!");
                 router.push("/login-registers");
             } else {
-                alert(data.message || "เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน");
+                showModal(data.message || "เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน");
             }
         } catch (error) {
             console.error("เกิดข้อผิดพลาด:", error);
-            alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+            showModal("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
         } finally {
             setLoading(false);
         }
@@ -71,6 +81,21 @@ export default function ResetPassword() {
                     <img src="/logomine1.png" alt="Login" />
                 </div>
             </div>
+            {modalMessage && (
+                <div className="modal-overlay">
+                <div className="modal-box">
+                    <button className="modal-close" onClick={closeModal}>×</button>
+                    <div className="checkmark-animation">
+                    <svg viewBox="0 0 52 52" className="checkmark">
+                        <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                        <path className="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
+                    </svg>
+                    </div>
+                    <p>{modalMessage}</p>
+                    <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+                </div>
+                </div>
+            )}
         </div>
     )
 }
