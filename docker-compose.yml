@@ -5,29 +5,29 @@ services:
     container_name: server-db
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: web_server
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:${POSTGRES_DB_VOLUME}
     networks:
-      - app-net
+      - ${NETWORK_NAME}
 
   pgadmin:
     image: dpage/pgadmin4
     container_name: server-pgadmin
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "8080:80"
     depends_on:
       - db
     networks:
-      - app-net
+      - ${NETWORK_NAME}
 
   backend:
     build: ./backend
@@ -35,19 +35,19 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DB_USER=admin
-      - DB_HOST=db
-      - DB_DATABASE=web_server
-      - DB_PASSWORD=admin123
-      - DB_PORT=5432
-      - EMAIL_USER=atjrobot44@gmail.com
-      - EMAIL_PASS=ppnf xqup fpqn ztar
+      - DB_USER=${DB_USER}
+      - DB_HOST=${DB_HOST}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PORT=${DB_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
     depends_on:
       - db
     networks:
-      - app-net
+      - ${NETWORK_NAME}
     volumes:
-      - ./backend/uploads/profile_Image:/home/adminexe/web-server/backend/uploads/profile_Image
+      - ./backend/uploads/profile_Image:${IMAGES_PROFILE_VOLUME}
 
   nextjs:
     build: ./frontend
@@ -57,7 +57,7 @@ services:
     ports:
       - "4000:4000"
     networks:
-      - app-net
+      - ${NETWORK_NAME}
 
   mongodb:
     image: mongo:latest
@@ -65,9 +65,9 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db
+      - mongo-data:${MONGO_VOLUME}
     networks:
-      - app-net
+      - ${NETWORK_NAME}
 
   iot-server:
     build: ./iot-server
@@ -77,9 +77,9 @@ services:
     depends_on:
       - mongodb
     environment:
-      - MONGO_URL=mongodb://mongodb:27017/esp32_db
+      - MONGO_URL=${MONGO_URL}
     networks:
-      - app-net
+      - ${NETWORK_NAME}
 
 volumes:
   db_data:

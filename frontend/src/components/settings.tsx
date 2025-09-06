@@ -3,12 +3,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import "@/styles/settings.css";
 import { useRouter } from 'next/navigation';
 
+
 export default function SettingsPage() {
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileImage, setProfileImage] = useState('/avatar.jpg');
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState(''); 
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -55,26 +56,26 @@ export default function SettingsPage() {
 
   const closeModal = () => {
     setModalMessage(null);
-    window.location.reload(); 
+    window.location.reload();
   };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-    
+
       if (!file.type.startsWith("image/")) {
-        alert("กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น");
+        showModal("กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น");
         return;
       }
 
       const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
       if (!allowedExtensions.includes(fileExtension || "")) {
-        alert("รองรับเฉพาะไฟล์: .jpg, .jpeg, .png, .gif, .webp");
+        showModal("รองรับเฉพาะไฟล์: .jpg, .jpeg, .png, .gif, .webp");
         return;
       }
       if (file.size > 2 * (1024 * 1024)) {
-        alert("ไฟล์ใหญ่เกิน 2MB");
+        showModal("ไฟล์ใหญ่เกิน 2MB");
         return;
       }
       const reader = new FileReader();
@@ -269,6 +270,12 @@ export default function SettingsPage() {
         <div className="modal-overlay">
           <div className="modal-box">
             <button className="modal-close" onClick={closeModal}>×</button>
+            <div className="checkmark-animation">
+              <svg viewBox="0 0 52 52" className="checkmark">
+                <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                <path className="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
+              </svg>
+            </div>
             <p>{modalMessage}</p>
             <button className="modal-ok" onClick={closeModal}>ตกลง</button>
           </div>

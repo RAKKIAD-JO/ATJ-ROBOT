@@ -28,12 +28,12 @@ interface HistoryItem {
 }
 
 interface User {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  profileImage: string;
-  isAdmin: boolean;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    profileImage: string;
+    isAdmin: boolean;
 }
 
 type EditableHistoryItem = Partial<HistoryItem & { id: number }>;
@@ -51,6 +51,7 @@ export default function HistoryPage() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(false);
+    const [modalMessage, setModalMessage] = useState<string | null>(null);
 
     const isValidDate = (d: Date) => d instanceof Date && !isNaN(d.getTime());
     // ฟังก์ตรวรสอบวัน
@@ -74,21 +75,21 @@ export default function HistoryPage() {
     useEffect(() => {
         // ดึงข้อมูลผู้ใช้
         fetch("/api/users/profile", {
-          method: "GET",
-          credentials: "include", 
+            method: "GET",
+            credentials: "include",
         })
-        .then(async (res) => {
-            if (res.status === 403 || res.status === 401) {
-                setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
-                router.replace("/");
-                return;
-            }
-            const data = await res.json();
-            setUser(data);
-        })
-        .catch((error) => {
-            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
-        });
+            .then(async (res) => {
+                if (res.status === 403 || res.status === 401) {
+                    setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+                    router.replace("/");
+                    return;
+                }
+                const data = await res.json();
+                setUser(data);
+            })
+            .catch((error) => {
+                setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
+            });
 
         // ตรวจสอบว่ามี selectedRobot และวันที่ครบหรือไม่
         if (!selectedRobot || !startDate || !endDate) return;
@@ -252,6 +253,22 @@ export default function HistoryPage() {
         });
     }
 
+    const showModal = (message: string) => {
+        setModalMessage(message);
+    };
+
+    const closeModal = () => {
+        setModalMessage(null);
+    };
+
+    useEffect(() => {
+        if (errorMessage) {
+            showModal(errorMessage);
+        } else {
+            setModalMessage(null);
+        }
+    }, [errorMessage]);
+
     return (
         <main className="main-history">
             <div className="title-history">
@@ -262,14 +279,14 @@ export default function HistoryPage() {
                 ) : loading ? (
                     <Loading />
                 ) : errorMessage ? (
-                    <p style={{ color: 'red' }}>{errorMessage}</p>
+                    <p>{errorMessage}</p>
                 ) : (
                     <>
                         <div className="selected-robot-info">
                             <p>หุ่นยนต์ที่เลือก:{" "}
                                 {user?.isAdmin
-                                ? selectedRobot.device_id
-                                : selectedRobot.robot_name}
+                                    ? selectedRobot.device_id
+                                    : selectedRobot.robot_name}
                             </p>
                         </div>
                         <div className="filter-section-date">
@@ -419,6 +436,22 @@ export default function HistoryPage() {
                     </>
                 )}
             </div>
+            {modalMessage && (
+                <div className="modal-overlay">
+                    <div className="modal-box">
+                        <button className="modal-close" onClick={closeModal}>×</button>
+                        <div className="crossmark-animation">
+                            <svg viewBox="0 0 52 52" className="crossmark">
+                                <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
+                                <path className="crossmark-line1" d="M16 16 L36 36" />
+                                <path className="crossmark-line2" d="M36 16 L16 36" />
+                            </svg>
+                        </div>
+                        <p>{modalMessage}</p>
+                        <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }
