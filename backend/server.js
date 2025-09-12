@@ -7,6 +7,12 @@ const cookieParser = require('cookie-parser');
 const robotRoutes = require('./robot/robot');
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger-output.json');
+const cors = require('cors');
+
+app.use(cors({
+   origin: ['http://localhost:4000'],
+   credentials: true
+}));
 
 const port = 5000;
 

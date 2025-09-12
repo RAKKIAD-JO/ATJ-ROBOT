@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import "@/styles/resetPassword.css"; // ใช้สไตล์เดิมได้
+import "@/styles/resetPassword.css";
 
 export default function AssignRobot() {
     const router = useRouter();
@@ -11,9 +11,11 @@ export default function AssignRobot() {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [modalMessage, setModalMessage] = useState<string | null>(null);
+    const [modalType, setModalType] = useState<"success" | "error">("success");
 
-    const showModal = (message: string) => {
+    const showModal = (message: string, type: "success" | "error" = "success") => {
         setModalMessage(message);
+        setModalType(type);
     };
 
     const closeModal = () => {
@@ -28,23 +30,23 @@ export default function AssignRobot() {
         fetch("/api/users/profile", {
             credentials: "include"
         })
-        .then(res => {
-            if (res.status === 403 || res.status === 401) {
-                setErrorMessage('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-                router.replace('/');
-                return;
-            }
-            return res.json();
-        })
-        .catch((err) => {
-            setErrorMessage('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
-        });
+            .then(res => {
+                if (res.status === 403 || res.status === 401) {
+                    setErrorMessage('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+                    router.replace('/');
+                    return;
+                }
+                return res.json();
+            })
+            .catch((err) => {
+                setErrorMessage('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
+            });
     }, [router]);
 
     const handleAssign = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!robotToken || !robotName) {
-            showModal("กรุณากรอกข้อมูลให้ครบถ้วน");
+            showModal("กรุณากรอกข้อมูลให้ครบถ้วน", "error");
             return;
         }
 
@@ -66,15 +68,15 @@ export default function AssignRobot() {
             const data = await res.json();
 
             if (res.ok && data.success) {
-                showModal(data.message || "เชื่อมต่อสำเร็จ!");
+                showModal(data.message, "success");
                 router.refresh();
                 router.push("/home");
             } else {
-                showModal(data.message || "ไม่สามารถเชื่อมต่อหุ่นยนต์ได้");
+                showModal(data.message, "error");
             }
         } catch (error) {
             console.error("เกิดข้อผิดพลาด:", error);
-            showModal("เกิดข้อผิดพลาดที่ไม่คาดคิด");
+            showModal("เกิดข้อผิดพลาดที่ไม่คาดคิด", "error");
         } finally {
             setLoading(false);
         }
@@ -121,17 +123,27 @@ export default function AssignRobot() {
             </div>
             {modalMessage && (
                 <div className="modal-overlay">
-                <div className="modal-box">
-                    <button className="modal-close" onClick={closeModal}>×</button>
-                    <div className="checkmark-animation">
-                    <svg viewBox="0 0 52 52" className="checkmark">
-                        <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
-                        <path className="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
-                    </svg>
+                    <div className="modal-box">
+                        <button className="modal-close" onClick={closeModal}>×</button>
+                        {modalType === "success" ? (
+                            <div className="checkmark-animation">
+                                <svg viewBox="0 0 52 52" className="checkmark">
+                                    <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
+                                    <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
+                                </svg>
+                            </div>
+                        ) : (
+                            <div className="crossmark-animation">
+                                <svg viewBox="0 0 52 52" className="crossmark">
+                                    <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
+                                    <path className="crossmark-line1" d="M16 16 L36 36" />
+                                    <path className="crossmark-line2" d="M36 16 L16 36" />
+                                </svg>
+                            </div>
+                        )}
+                        <p>{modalMessage}</p>
+                        <button className="modal-ok" onClick={closeModal}>ตกลง</button>
                     </div>
-                    <p>{modalMessage}</p>
-                    <button className="modal-ok" onClick={closeModal}>ตกลง</button>
-                </div>
                 </div>
             )}
         </div>

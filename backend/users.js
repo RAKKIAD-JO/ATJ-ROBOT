@@ -27,7 +27,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 
-// ✅ REGISTER USER
+// REGISTER USER
 router.post("/register", async (req, res) => {
   const { firstName, lastName, passWord, phoneNumber, email } = req.body;
   try {
@@ -372,32 +372,6 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
   }
 });
 
-// ✅ ADD token TO USER
-/*router.post("/add-token", authenticateToken, async (req, res) => {
-  const userId = req.userId;
-  const { token } = req.body;
-
-  try {
-    const response = await axios.get(`http://iot-server:3000/token/${token}`);
-    if (!response.data || response.status !== 200) {
-      return res.status(404).json({ error: "token not found in MongoDB" });
-    }
-
-    const result = await pool.query(
-      'UPDATE users SET token = $1 WHERE id = $2 RETURNING *',
-      [token, userId]
-    );
-
-    return res.json({ message: "token saved", user: result.rows[0] });
-  } catch (error) {
-    if (error.response?.status === 404) {
-      return res.status(404).json({ error: "token not found in MongoDB" });
-    }
-    console.error(error);
-    res.status(500).json({ error: "Server error" });
-  }
-});*/
-
 // ✅ GET TOKEN EMAIL
 router.get("/verify-email", async (req, res) => {
   const { email, token } = req.query;
@@ -446,12 +420,10 @@ router.get("/verify-email", async (req, res) => {
       `);
     }
 
-    // อัปเดตให้ผู้ใช้ verified
     await pool.query(`UPDATE users SET is_verified = true WHERE email = $1`, [
       email,
     ]);
 
-    // ลบ token เพื่อไม่ให้ใช้ซ้ำ
     await pool.query(`DELETE FROM email_verifications WHERE email = $1`, [
       email,
     ]);

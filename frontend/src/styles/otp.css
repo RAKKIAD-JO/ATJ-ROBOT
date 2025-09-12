@@ -81,7 +81,6 @@
     font-weight: 500;
 }
 
-/* Overlay */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -152,38 +151,51 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-.checkmark-animation {
+.crossmark-animation {
   display: flex;
   justify-content: center;
   align-items: center;
   margin-bottom: 1rem;
 }
-.checkmark {
+
+.crossmark {
   width: 56px;
   height: 56px;
   display: block;
   stroke-width: 3;
-  stroke: #17a2b8;
+  stroke: #dc3545; 
   stroke-miterlimit: 10;
   border-radius: 50%;
   background: #fff;
 }
-.checkmark-circle {
+
+.crossmark-circle {
   stroke-dasharray: 166;
   stroke-dashoffset: 166;
   stroke-width: 3;
-  stroke: #17a2b8;
+  stroke: #dc3545;
   fill: none;
   animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
-.checkmark-check {
-  stroke-dasharray: 48;
-  stroke-dashoffset: 48;
-  stroke: #17a2b8;
+
+.crossmark-line1 {
+  stroke-dasharray: 28;   
+  stroke-dashoffset: 28;  
+  stroke: #dc3545;
   stroke-width: 3;
   fill: none;
   animation: stroke 0.4s 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
+
+.crossmark-line2 {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  stroke: #dc3545;
+  stroke-width: 3;
+  fill: none;
+  animation: stroke 0.4s 1s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
 @keyframes stroke {
   100% {
     stroke-dashoffset: 0;

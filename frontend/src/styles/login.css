@@ -1,141 +1,150 @@
 .container-login {
-    width: 100%;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #f3f4f6;
-    z-index: 100;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f3f4f6;
+  z-index: 100;
 }
 
 .crad-login {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  background: rgb(255, 255, 255);
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+.form-box {
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-box h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  color: rgb(53, 131, 164);
+}
+
+.form-box form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-box input {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.form-box input:focus {
+  outline: none;
+  border-color: rgb(53, 131, 164);
+  box-shadow: 0 0 5px rgba(53, 131, 164, 0.5);
+}
+
+.form-box button {
+  padding: 0.75rem;
+  background-color: rgb(53, 131, 164);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.form-box button:hover {
+  background-color: rgb(96, 175, 208);
+}
+
+.form-box p {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.toggle-link {
+  color: rgb(53, 131, 164);
+  cursor: pointer;
+  font-weight: 500;
+  margin-left: 0.3rem;
+}
+
+.image-box-login {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 5rem;
+}
+
+.image-box-login img {
+  width: 300px;
+  height: 300px;
+  border-radius: 12px;
+}
+
+.image-box-login h1 {
+  color: rgb(53, 131, 164);
+  font-size: 2rem;
+}
+
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  .container-login {
+    z-index: 1000;
+  }
+
+  .crad-login {
     width: 100%;
-    max-width: 900px;
+    max-width: 700px;
     display: flex;
     background: rgb(255, 255, 255);
     border-radius: 12px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  }
+
 }
 
-.form-box {
-    padding: 2rem 2.5rem;
-    border-radius: 12px;
+@media screen and (max-width: 767px) {
+  .container-login {
+    background-color: white;
+    z-index: 10000;
+  }
+
+  .crad-login {
+    flex-direction: column-reverse;
     width: 100%;
-    max-width: 400px;
-}
+    max-width: 100%;
+    box-shadow: none;
+  }
 
-.form-box h2 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
+  .image-box-login h1 {
     color: rgb(53, 131, 164);
-}
-
-.form-box form {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-box input {
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 0.85rem;
-}
-
-.form-box input:focus {
-    outline: none;
-    border-color: rgb(53, 131, 164);
-    box-shadow: 0 0 5px rgba(53, 131, 164, 0.5);
-}
-
-.form-box button {
-    padding: 0.75rem;
-    background-color: rgb(53, 131, 164);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.form-box button:hover {
-    background-color: rgb(96, 175, 208);
-}
-
-.form-box p {
-    margin-top: 1rem;
+    font-size: 2rem;
     text-align: center;
-}
+  }
 
-.toggle-link {
-    color: rgb(53, 131, 164);
-    cursor: pointer;
-    font-weight: 500;
-    margin-left: 0.3rem;
-}
+  .image-box-login img {
+    width: 200px;
+    height: 200px;
+    border-radius: 12px;
+  }
 
-.image-box {
+  .image-box-login {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 2rem 5rem;
-}
-
-.image-box img {
-    width: 300px;
-    height: 300px;
-    border-radius: 12px;
-}
-
-.image-box h1 {
-    color: rgb(53, 131, 164);
-    font-size: 2rem;
-}
-
-@media screen and (min-width: 768px) and (max-width: 1024px) {
-    .container-login {
-        z-index: 1000;
-    }
-
-    .crad-login {
-        width: 100%;
-        max-width: 700px;
-        display: flex;
-        background: rgb(255, 255, 255);
-        border-radius: 12px;
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    }
-
-}
-
-@media screen and (max-width: 767px) {
-    .container-login {
-        background-color: white;
-        z-index: 10000;
-    }
-
-    .crad-login {
-        flex-direction: column-reverse;
-        width: 100%;
-        max-width: 100%;
-        box-shadow: none;
-    }
-
-    .image-box h1 {
-        color: rgb(53, 131, 164);
-        font-size: 2rem;
-        text-align: center;
-    }
-
-    .image-box img {
-        width: 200px;
-        height: 200px;
-        border-radius: 12px;
-    }
+    margin-top: 15rem;
+  }
 
 }
 
@@ -183,7 +192,7 @@
 }
 
 .modal-close:hover {
-    color: #b81717;
+  color: #b81717;
 }
 
 .modal-ok {
@@ -205,8 +214,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .checkmark-animation {
@@ -215,6 +231,7 @@
   align-items: center;
   margin-bottom: 1rem;
 }
+
 .checkmark {
   width: 56px;
   height: 56px;
@@ -225,6 +242,7 @@
   border-radius: 50%;
   background: #fff;
 }
+
 .checkmark-circle {
   stroke-dasharray: 166;
   stroke-dashoffset: 166;
@@ -233,6 +251,7 @@
   fill: none;
   animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
+
 .checkmark-check {
   stroke-dasharray: 48;
   stroke-dashoffset: 48;
@@ -241,6 +260,7 @@
   fill: none;
   animation: stroke 0.4s 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
+
 @keyframes stroke {
   100% {
     stroke-dashoffset: 0;

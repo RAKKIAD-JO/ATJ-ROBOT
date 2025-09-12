@@ -141,9 +141,6 @@ export default function Sidebar() {
         window.location.href = "/";
     };
 
-    if (pathname === "/") return null;
-    if (pathname === "/loading") return null;
-
     return (
         <div className="container">
             <div className={`menu-icon ${isSidebarOpen ? "active" : ""}`} onClick={toggleSidebar}>
@@ -163,11 +160,11 @@ export default function Sidebar() {
 
                 <div className="sidebar">
                     {user?.isAdmin && (
-                        <Link href="/admin" className={pathname === "/admin" ? "active" : ""}>
-                            <span className="material-symbols-outlined">admin_panel_settings</span>
-                            <div className="tooltip">จัดการ Token</div>
-                            <h3>จัดการ Token</h3>
-                        </Link>
+                    <Link href="/admin" className={pathname === "/admin" ? "active" : ""}>
+                        <span className="material-symbols-outlined">admin_panel_settings</span>
+                        <div className="tooltip">จัดการ Token</div>
+                        <h3>จัดการ Token</h3>
+                    </Link>
                     )}
                     <Link href="/home" className={pathname === "/home" ? "active" : ""}>
                         <span className="material-symbols-outlined">grid_view</span>

@@ -1,12 +1,12 @@
 .main-loading {
-    width: 50%;
-    height: 80vh;
-    margin-left: 20vw; 
+
+    width: 100vw;
+    height: 100vh;
     display: flex;
-    flex-direction: column;    
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-} 
+}
 
 .title-loading {
     font-size: 1.3rem;
@@ -14,3 +14,63 @@
     color: #17a2b8;
 }
 
+.head-title-loading {
+    font-weight: 700;
+    font-size: 55px;
+    display: inline-block;
+}
+
+.tail-title-loading {
+
+    font-size: 36px;
+    display: inline-block;
+}
+
+.under-loading {
+    font-size: 35px;
+
+}
+
+.cardContainer-loading {
+    width: 100%;
+    max-width: 700px;
+    height: 300px;
+    padding: 50px;
+    margin: 50px;
+    background: #d9f7ffd7;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    border-radius: 35px;
+    /* border: 2px solid; */
+}
+
+
+.box-wifi-connected{
+    width: 600px;
+    /* border: 2px solid rgb(136, 185, 29); */
+}
+
+.display-wifi-connected{
+    /* border: 2px solid rgb(76, 16, 241); */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.box-header-text{
+    font-size: 25px;
+    font-weight: 500;
+}
+
+.box-icons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bx-wifi-off {
+    font-size: 125px;
+    color: red; 
+}

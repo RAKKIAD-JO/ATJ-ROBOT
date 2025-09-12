@@ -136,6 +136,8 @@ export default function Graph() {
 
   const closeModal = () => {
     setModalMessage(null);
+    setStartDate("");
+    setEndDate("");
   };
 
   useEffect(() => {
@@ -162,6 +164,10 @@ export default function Graph() {
     { id: 2, value: usageByType.pesticide, label: "สารเคมี" },
   ];
 
+  if (loading) {
+    return <Loading />;
+  }
+
   return (
     <main className="graph-dashboard">
       <section className="graph-dashboard-content">
@@ -170,10 +176,6 @@ export default function Graph() {
         </div>
           {!selectedRobot ? (
             <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
-          ) : loading ? (
-            <Loading />
-          ) : errorMessage ? (
-            <p>{errorMessage}</p>
           ) : (
             <>
             <div className="selected-robot-info">
@@ -206,8 +208,6 @@ export default function Graph() {
                 <div className="graph-main-chart">
                   <div className="line-graph-chart">
                     <LineChart
-                      width={1000}
-                      height={300}
                       series={[
                         { data: waterSeries, label: "น้ำ" },
                         { data: fertilizerSeries, label: "ปุ๋ย" },
@@ -218,8 +218,6 @@ export default function Graph() {
                   </div>
                   <div className="bar-graph-chart">
                     <BarChart
-                      width={1000}
-                      height={300}
                       series={[
                         { data: waterSeries, label: "น้ำ" },
                         { data: fertilizerSeries, label: "ปุ๋ย" },
