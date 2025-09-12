@@ -533,7 +533,6 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
   }
 });
 
-// /chemical-usage-by-type (Proxy API)
 router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
   const { device_id, startDate, endDate } = req.query;
   const userId = req.userId;

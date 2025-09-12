@@ -1,7 +1,6 @@
 import"@/styles/layout.css"
-import Sidebar from "@/components/sidebar"
 import { Kanit } from 'next/font/google'
-import { SelectedRobotProvider } from "@/app/contexts/SelectedRobotContext"; 
+import ClientLayout from "@/components/clientLayout";
 
 const kanit = Kanit({
   subsets: ['thai'],
@@ -27,10 +26,7 @@ export default function RootLayout({
       </head>
 
       <body className={kanit.className}>
-        <SelectedRobotProvider>
-          <Sidebar />
-          {children}
-        </SelectedRobotProvider>
+         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   )

@@ -1,12 +1,12 @@
-.graph-dashboard  {
-    width: 80%;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    margin-top: 1.4rem;
-    margin-left: 15vw;
-    padding: 2rem;
-    /* overflow: hidden ; */
+.graph-dashboard {
+  width: 80%;
+  margin: 0 auto;
+  /* display: grid;
+    grid-template-columns: auto 1fr; */
+  margin-top: 1.4rem;
+  margin-left: 15vw;
+  padding: 2rem;
+  /* overflow: hidden ; */
 }
 
 .graph-header {
@@ -22,6 +22,7 @@
   gap: 16px;
 
 }
+
 .graph-main-content {
   display: flex;
   flex-direction: row;
@@ -29,175 +30,190 @@
 
 
 main .graph-date-picker {
-    display: inline-block;
-    background: #dcd9d9;
-    border-radius: 10px;
-    margin-top: 1rem;
-    margin-left: 1rem;
-    margin-right: 1rem;
-    padding: 0.3rem 1.4rem;
-    border: none;
+  display: inline-block;
+  background: #dcd9d9;
+  border-radius: 10px;
+  margin-left: 1rem;
+  margin-right: 1rem;
+  padding: 0.3rem 1.4rem;
+  border: none;
 }
 
 main .graph-select {
-    display: inline-block;
-    background: #dcd9d9;
-    border-radius: 10px;
-    margin-top: 1rem;
-    margin-left: 1rem;
-    padding: 0.3rem 1.4rem;
-    border: none;
+  display: inline-block;
+  background: #dcd9d9;
+  border-radius: 10px;
+  margin-top: 1rem;
+  margin-left: 1rem;
+  padding: 0.3rem 1.4rem;
+  border: none;
 }
 
 .graph-main-chart {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    padding: 0.7rem;
-    border-radius: 2rem;
-    margin-top: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0.7rem;
+  border-radius: 2rem;
+  margin-top: 0.3rem;
 
+}
+.graph-start-date{
+  display: flex;
+}
+.graph-filters {
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  gap: 1rem;
+}
+.css-pswb34-MuiChartsSurface-root{
+  width: 250px !important;
+  height: 150px !important;
+}
+.css-flugmh{
+  width: 250px !important;
+  height: 150px !important;
 }
 
 .line-graph-chart {
-    display: flex;
-    justify-content: center;
-    max-width: 90%;
-    width: 850px;
-    height: 220px;
-    border-radius: 1.4rem;
-    margin-bottom: 1.8rem;
-    background-color: rgb(255, 255, 255);
-    box-shadow: 0 2rem 3rem #dce1ed;
-    transition: all 300ms ease;
+  display: flex;
+  justify-content: center;
+  max-width: 90%;
+  width: 850px;
+  height: 220px;
+  border-radius: 1.4rem;
+  margin-bottom: 1.8rem;
+  background-color: rgb(255, 255, 255);
+  box-shadow: 0 2rem 3rem #dce1ed;
+  transition: all 300ms ease;
 }
 
 .bar-graph-chart {
-    display: flex;
-    justify-content: center;
-    max-width: 90%;
-    width: 850px;
-    height: 220px;
-    border-radius: 1.4rem;
-    margin-bottom: 1.8rem;
-    background-color: rgb(255, 255, 255);
-    box-shadow: 0 2rem 3rem #dce1ed;
-    transition: all 300ms ease;
+  display: flex;
+  justify-content: center;
+  max-width: 90%;
+  width: 850px;
+  height: 220px;
+  border-radius: 1.4rem;
+  margin-bottom: 1.8rem;
+  background-color: rgb(255, 255, 255);
+  box-shadow: 0 2rem 3rem #dce1ed;
+  transition: all 300ms ease;
 }
 
 .bar-graph-chart:hover {
-    box-shadow: none;
+  box-shadow: none;
 }
 
 .line-graph-chart:hover {
-    box-shadow: none;
+  box-shadow: none;
 }
 
 .graph-right-panel {
-    width: 300px;
+  width: 300px;
 }
 
 
 section .graph-title h2 {
-    font-size: 20px;
+  font-size: 20px;
 }
 
 section .graph-chemical-list {
-    margin-top: 3.8rem;
-    background-color: white;
-    padding: 0.5rem;
-    border-radius: 2rem;
-    box-shadow: 0 2rem 3rem #dce1ed;
-    transition: all 300ms ease;
+  margin-top: 2.8rem;
+  background-color: white;
+  padding: 0.5rem;
+  border-radius: 2rem;
+  box-shadow: 0 2rem 3rem #dce1ed;
+  transition: all 300ms ease;
 }
 
 section .graph-chemical-list:hover {
-    box-shadow: none;
+  box-shadow: none;
 }
 
 section .chemical-water-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border-radius: 10px;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 10px;
+  border-bottom: 1px solid #ccc;
 }
 
 section .chemical-water-item span {
-    padding: 0.1rem;
-    border-radius: 50%;
-    font-size: 1rem;
+  padding: 0.1rem;
+  border-radius: 50%;
+  font-size: 1rem;
 }
 
 .chemical-water-item p {
-    margin: 0;
-    font-size: 1rem;
-    color: #333;
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
 }
 
 section .chemical-fertilizer-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border-radius: 10px;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ccc;
 }
 
 section .chemical-fertilizer-item span {
-    padding: 0.1rem;
-    border-radius: 50%;
-    font-size: 1rem;
+  padding: 0.1rem;
+  border-radius: 50%;
+  font-size: 1rem;
 }
 
 .chemical-fertilizer-item p {
-    margin: 0;
-    font-size: 1rem;
-    color: #333;
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
 }
 
 section .chemical-hazardous-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border-radius: 10px;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ccc;
 }
 
 section .chemical-hazardous-item span {
-    padding: 0.1rem;
-    border-radius: 50%;
-    font-size: 1rem;
+  padding: 0.1rem;
+  border-radius: 50%;
+  font-size: 1rem;
 }
 
 .chemical-hazardous-item p {
-    margin: 0;
-    font-size: 1rem;
-    color: #333;
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
 }
 
 .graph-detail-box {
-    height: 210px;
-    margin-top: 1.2rem;
-    padding: 1rem;
-    background-color: #f9f9f9;
-    padding: 2rem;
-    border-radius: 2rem;
-    box-shadow: 0 2rem 3rem #dce1ed;
-    transition: all 300ms ease;
+  height: 220px;
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  /* padding: 2rem; */
+  border-radius: 2rem;
+  box-shadow: 0 2rem 3rem #dce1ed;
+  transition: all 300ms ease;
 }
 
 .graph-subtitle {
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
-    color: #333;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #333;
 }
 
 .modal-overlay {
@@ -244,7 +260,7 @@ section .chemical-hazardous-item span {
 }
 
 .modal-close:hover {
-    color: #b81717;
+  color: #b81717;
 }
 
 .modal-ok {
@@ -266,8 +282,15 @@ section .chemical-hazardous-item span {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .crossmark-animation {
@@ -282,7 +305,7 @@ section .chemical-hazardous-item span {
   height: 56px;
   display: block;
   stroke-width: 3;
-  stroke: #dc3545; 
+  stroke: #dc3545;
   stroke-miterlimit: 10;
   border-radius: 50%;
   background: #fff;
@@ -298,8 +321,8 @@ section .chemical-hazardous-item span {
 }
 
 .crossmark-line1 {
-  stroke-dasharray: 28;   
-  stroke-dashoffset: 28;  
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
   stroke: #dc3545;
   stroke-width: 3;
   fill: none;
@@ -319,4 +342,45 @@ section .chemical-hazardous-item span {
   100% {
     stroke-dashoffset: 0;
   }
+}
+
+@media (max-width: 1430px) {
+
+
+  .graph-main-content {
+    flex-direction: column;
+  }
+
+  .graph-right-panel {
+    width: 88%;
+    margin: 10px auto 30px auto;
+  }
+
+  section .graph-chemical-list {
+    margin-top: 0px;
+  }
+
+  .graph-detail-box {
+    height: auto;
+  }
+  .css-pswb34-MuiChartsSurface-root{
+  width: 250px !important;
+  height: 200px !important;
+}
+
+}
+
+@media (max-width: 900px) {
+  .graph-filters {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
+  }
+
+}
+@media (max-width: 400px) {
+ .graph-label {
+    font-size: 12px;
+ }
 }

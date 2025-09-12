@@ -1,11 +1,11 @@
 .main-history {
-    width: 90%;
-    margin: 0 auto;
-    gap: 1.8rem;
-    margin-top: 1.4rem;
-    margin-left: 15vw; 
-    padding: 3rem;
-    overflow-x: hidden;
+  width: 90%;
+  margin: 0 auto;
+  gap: 1.8rem;
+  margin-top: 1.4rem;
+  margin-left: 15vw;
+  padding: 3rem;
+  overflow-x: hidden;
 }
 
 .subtitle {
@@ -35,11 +35,12 @@
   border-bottom: 3px solid #17a2b8;
 }
 
-.filter-section-date{
+.filter-section-date {
   display: flex;
   justify-content: end;
   gap: 1rem;
 }
+
 .filter-date {
   display: flex;
   flex-direction: column;
@@ -58,7 +59,7 @@
   width: 100px;
   border: none;
   background-color: #dcd9d9;
-  color:#928e8e;
+  color: #928e8e;
   border-radius: 10px;
   font-family: 'Kanit', sans-serif;
   transition: border 0.3s ease, box-shadow 0.3s ease;
@@ -74,7 +75,7 @@
   margin-left: auto;
   padding: 0.5rem 1rem;
   background-color: transparent;
-  border: 1px solid #17a2b8; 
+  border: 1px solid #17a2b8;
   color: #17a2b8;
   border-radius: 10px;
   font-size: 0.9rem;
@@ -83,7 +84,7 @@
 }
 
 .btn-download-csv:hover {
-  background-color: #88b7b9; 
+  background-color: #88b7b9;
   color: white;
 }
 
@@ -249,7 +250,7 @@
 }
 
 .modal-close:hover {
-    color: #b81717;
+  color: #b81717;
 }
 
 .modal-ok {
@@ -271,8 +272,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .crossmark-animation {
@@ -287,13 +295,13 @@
   height: 56px;
   display: block;
   stroke-width: 3;
-  stroke: #dc3545; 
+  stroke: #dc3545;
   stroke-miterlimit: 10;
   border-radius: 50%;
   background: #fff;
 }
 
-.crossmark-circle {
+.crossmark-circle-error {
   stroke-dasharray: 166;
   stroke-dashoffset: 166;
   stroke-width: 3;
@@ -302,9 +310,29 @@
   animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
 
+.checkmark-circle-ok {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 3;
+  stroke: #17a2b8;
+  fill: none;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark {
+  width: 56px;
+  height: 56px;
+  display: block;
+  stroke-width: 3;
+  stroke: #17a2b8;
+  stroke-miterlimit: 10;
+  border-radius: 50%;
+  background: #fff;
+}
+
 .crossmark-line1 {
-  stroke-dasharray: 28;   
-  stroke-dashoffset: 28;  
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
   stroke: #dc3545;
   stroke-width: 3;
   fill: none;
@@ -320,8 +348,38 @@
   animation: stroke 0.4s 1s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
 
+.checkmark-circle-ok {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 3;
+  stroke: #17a2b8;
+  fill: none;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.checkmark-check-ok {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  stroke: #17a2b8;
+  stroke-width: 3;
+  fill: none;
+  animation: stroke 0.4s 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
 @keyframes stroke {
   100% {
     stroke-dashoffset: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .filter-section-date {
+    justify-self: start;
+    margin-top: 1.2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: #555;
+    margin-top: 1rem;
   }
 }

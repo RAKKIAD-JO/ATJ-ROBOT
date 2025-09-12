@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [modalMessage, setModalMessage] = useState<string | null>(null);
+  const [modalType, setModalType] = useState<"success" | "error">("success");
 
   useEffect(() => {
     fetch("/api/users/profile", {
@@ -50,8 +51,9 @@ export default function SettingsPage() {
       });
   }, [router]);
 
-  const showModal = (message: string) => {
+  const showModal = (message: string, type: "success" | "error" = "success") => {
     setModalMessage(message);
+    setModalType(type);
   };
 
   const closeModal = () => {
@@ -64,7 +66,7 @@ export default function SettingsPage() {
     if (file) {
 
       if (!file.type.startsWith("image/")) {
-        showModal("กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น");
+        showModal("กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น", 'error');
         return;
       }
 
@@ -75,7 +77,7 @@ export default function SettingsPage() {
         return;
       }
       if (file.size > 2 * (1024 * 1024)) {
-        showModal("ไฟล์ใหญ่เกิน 2MB");
+        showModal("รูปห้ามใหญ่เกิน 2MB", 'error');
         return;
       }
       const reader = new FileReader();
@@ -228,7 +230,7 @@ export default function SettingsPage() {
                   className="material-symbols-outlined toggle-icon"
                   onClick={() => setShowNewPassword(!showNewPassword)}
                 >
-                  {showNewPassword ? "visibility_off" : "visibility"}
+                  {showNewPassword ? "visibility " : "visibility_off"}
                 </span>
               </div>
             </div>
@@ -246,7 +248,7 @@ export default function SettingsPage() {
                   className="material-symbols-outlined toggle-icon"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? "visibility_off" : "visibility"}
+                  {showConfirmPassword ? "visibility" : "visibility_off"}
                 </span>
               </div>
               {errorMessage && <p className="error-message">{errorMessage}</p>}
@@ -268,17 +270,27 @@ export default function SettingsPage() {
       </div>
       {modalMessage && (
         <div className="modal-overlay">
-          <div className="modal-box">
-            <button className="modal-close" onClick={closeModal}>×</button>
-            <div className="checkmark-animation">
-              <svg viewBox="0 0 52 52" className="checkmark">
-                <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
-                <path className="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
-              </svg>
+            <div className="modal-box">
+                <button className="modal-close" onClick={closeModal}>×</button>
+                {modalType === "success" ? (
+                    <div className="checkmark-animation">
+                        <svg viewBox="0 0 52 52" className="checkmark">
+                            <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
+                            <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
+                        </svg>
+                    </div>
+                ) : (
+                    <div className="crossmark-animation">
+                        <svg viewBox="0 0 52 52" className="crossmark">
+                            <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
+                            <path className="crossmark-line1" d="M16 16 L36 36" />
+                            <path className="crossmark-line2" d="M36 16 L16 36" />
+                        </svg>
+                    </div>
+                )}
+                <p>{modalMessage}</p>
+                <button className="modal-ok" onClick={closeModal}>ตกลง</button>
             </div>
-            <p>{modalMessage}</p>
-            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
-          </div>
         </div>
       )}
     </main>

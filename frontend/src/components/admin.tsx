@@ -16,6 +16,15 @@ interface Robot {
     phone?: number;
 }
 
+interface User {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  profileImage: string;
+  isAdmin: boolean;
+}
+
 export default function AdminPage() {
     const [deviceId, setDeviceId] = useState('');
     const [token, setToken] = useState('');
@@ -24,11 +33,32 @@ export default function AdminPage() {
     const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
     const { setSelectedRobot } = useSelectedRobot();
     const router = useRouter();
+    const [modalMessage, setModalMessage] = useState<string | null>(null);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        fetch("/api/users/profile", {
+        method: "GET",
+        credentials: "include",
+        })
+        .then(async (res) => {
+            if (res.status === 403 || res.status === 401) {
+            showModal("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+            router.replace("/");
+            return;
+            }
+            const data = await res.json();
+            setUser(data);
+        })
+        .catch((error) => {
+            showModal("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
+        });
+    }, [router]);
 
     const handleGenerateToken = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!deviceId.trim()) return alert('กรุณากรอก Device ID');
+        if (!deviceId.trim()) return showModal('กรุณากรอก Device ID');
 
         try {
             const res = await fetch('/iot-api/api/generate-token', {
@@ -44,11 +74,11 @@ export default function AdminPage() {
                 setDeviceId('');
                 fetchRobots();
             } else {
-                alert(data.message || 'เกิดข้อผิดพลาด');
+                showModal(data.message || 'เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            showModal('เกิดข้อผิดพลาดในการเชื่อมต่อ');
         }
     };
 
@@ -60,7 +90,7 @@ export default function AdminPage() {
             });
 
             if (res.status === 401) {
-                alert('คุณยังไม่เข้าสู่ระบบ หรือสิทธิ์ไม่เพียงพอ');
+                showModal('คุณยังไม่เข้าสู่ระบบ หรือสิทธิ์ไม่เพียงพอ');
                 return;
             }
 
@@ -99,6 +129,21 @@ export default function AdminPage() {
         router.push('/home'); 
     };
 
+    const showModal = (message: string) => {
+        setModalMessage(message);
+    };
+
+    const closeModal = () => {
+        setModalMessage(null);
+    };
+
+    useEffect(() => {
+        if (user && user.isAdmin === false) {
+            router.replace("/home");
+        }
+    }, [user, router]);
+
+    
     return (
         <div className="admin-container">
             <h1>จัดการ Token และหุ่นยนต์</h1>
@@ -152,7 +197,6 @@ export default function AdminPage() {
                     />
                 </div>
             </div>
-
             <div className="robot-grid">
                 {filteredRobots.length === 0 ? (
                     <p>ไม่พบหุ่นยนต์ที่ตรงกับเงื่อนไข</p>
@@ -170,6 +214,22 @@ export default function AdminPage() {
                     ))
                 )}
             </div>
+            {modalMessage && (
+                <div className="modal-overlay">
+                    <div className="modal-box">
+                        <button className="modal-close" onClick={closeModal}>×</button>
+                        <div className="crossmark-animation">
+                            <svg viewBox="0 0 52 52" className="crossmark">
+                                <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
+                                <path className="crossmark-line1" d="M16 16 L36 36" />
+                                <path className="crossmark-line2" d="M36 16 L16 36" />
+                            </svg>
+                        </div>
+                        <p>{modalMessage}</p>
+                        <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

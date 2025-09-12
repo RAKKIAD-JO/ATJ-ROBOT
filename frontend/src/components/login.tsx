@@ -156,12 +156,11 @@ export default function Home() {
             </p>
           )}
         </div>
-        <div className="image-box">
+        <div className="image-box-login">
           <h1>welcome ATJ robot</h1>
           <img src="/logomine1.png" alt="Login" />
         </div>
 
-        {/* ✅ Modal Component */}
         {modalMessage && (
         <div className="modal-overlay">
           <div className="modal-box">

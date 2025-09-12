@@ -134,14 +134,16 @@ export default function Home() {
   const flowRatePercent = Number(sensorData?.sprayRate) || 0;
   const waterLevelPercent = Number(sensorData?.waterLevel) || 0;
 
+  if (loadingSensor && loadingDataType) {
+    return <Loading />;
+  }
+
   return (
     <main className='main-home'>
       <div className="dashboard">
         <h1>Dashboard</h1>
         {!selectedRobot ? (
           <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
-        ) : loadingSensor || loadingDataType ? (
-          <Loading />
         ) : errorMessage ? (
           <p>{errorMessage}</p>
         ) : !sensorData ? (
