@@ -1,6 +1,7 @@
 const mongodb = require('mongoose');
 
 const esp32DataSchema = new mongodb.Schema({
+  formID: { type: String, required: true, unique: true },
   device_id: { type: String, required: true },
   plantType: { type: String, required: true },
   liquidType: { type: String, required: true },

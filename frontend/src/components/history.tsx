@@ -10,6 +10,7 @@ import {
     Button,
     TextField,
     Pagination,
+    MenuItem,
 } from '@mui/material';
 import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
 import { useRouter } from "next/navigation";
@@ -100,9 +101,9 @@ export default function HistoryPage() {
             try {
                 if (!selectedRobot || !startDate || !endDate) return;
                 const startStr = startDate;
-                const endStr = endDate; 
+                const endStr = endDate;
                 const res = await fetch(
-                    `/robot/chemical-usage-history?device_id=${selectedRobot.device_id}&startDate=${startStr}&endDate=${endStr}`,
+                    `/robot/usage-history?device_id=${selectedRobot.device_id}&startDate=${startStr}&endDate=${endStr}`,
                     {
                         method: "GET",
                         credentials: "include",
@@ -114,7 +115,6 @@ export default function HistoryPage() {
                 }
 
                 const json = await res.json();
-                console.log("json API:", json);
 
                 if (json.length === 0) {
                     setData([]);
@@ -173,7 +173,7 @@ export default function HistoryPage() {
         };
 
         try {
-            const response = await fetch(`/robot/history/${_id}`, {
+            const response = await fetch(`/robot/edit-History/${_id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 credentials: 'include',
@@ -182,12 +182,12 @@ export default function HistoryPage() {
 
             if (!response.ok) {
                 throw new Error("บันทึกข้อมูลล้มเหลว");
-            }else if (response.ok) {
+            } else if (response.ok) {
                 showModal("บันทึกข้อมูลเรียบร้อย", "success");
             }
 
             const result = await response.json();
-            const updatedItem = result.iotData?.data;
+            const updatedItem = result.message?.data;
 
             if (!updatedItem || !updatedItem._id) {
                 throw new Error("ข้อมูลอัปเดตไม่ถูกต้อง");
@@ -391,6 +391,7 @@ export default function HistoryPage() {
                                     margin="dense"
                                 />
                                 <TextField
+                                    select
                                     label="ประเภทของเหลว"
                                     value={editItem?.liquidType || ""}
                                     onChange={(e) =>
@@ -398,7 +399,13 @@ export default function HistoryPage() {
                                     }
                                     fullWidth
                                     margin="dense"
-                                />
+                                >
+                                    <MenuItem value="EDIT_ME">เลือกประเภทของเหลว</MenuItem>
+                                    <MenuItem value="น้ำ">น้ำ</MenuItem>
+                                    <MenuItem value="สารเคมี">สารเคมี</MenuItem>
+                                    <MenuItem value="ปุ๋ย">ปุ๋ย</MenuItem>
+                                </TextField>
+
                                 <TextField
                                     label="ชื่อสารเคมี"
                                     value={editItem?.chemicalName || ""}

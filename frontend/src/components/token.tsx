@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import "@/styles/token.css";
 import "@/styles/resetPassword.css";
 
 export default function AssignRobot() {
@@ -20,7 +21,9 @@ export default function AssignRobot() {
 
     const closeModal = () => {
         setModalMessage(null);
-        window.location.reload();
+        if (modalType === "success") {
+            router.push("/home");
+        }
     };
 
     useEffect(() => {
@@ -69,8 +72,8 @@ export default function AssignRobot() {
 
             if (res.ok && data.success) {
                 showModal(data.message, "success");
-                router.refresh();
-                router.push("/home");
+
+
             } else {
                 showModal(data.message, "error");
             }

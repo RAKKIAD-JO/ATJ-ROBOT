@@ -7,7 +7,7 @@ type DonutChartProps = {
   label: string;
   value: number;
   color: string;
-  mode: 'remaining' | 'usage'; // 'remaining' = เหลืออยู่, 'usage' = ใช้ไปแล้ว
+  mode: 'remaining' | 'usage'; 
 };
 
 function DonutChart({ label, value, color, mode }: DonutChartProps) {
@@ -49,7 +49,7 @@ function DonutChart({ label, value, color, mode }: DonutChartProps) {
           userSelect: 'none',
         }}
       >
-        {value}%
+        {mode === 'remaining' ? `${value}%` : `${value}L`}
       </div>
     </div>
   );
