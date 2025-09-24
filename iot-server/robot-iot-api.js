@@ -7,41 +7,38 @@ const Esp32Sensor = require('./models/esp32sensor');
 const authenticateDevice = require('./middleware/authenticateDevice');
 const express = require("express");
 const router = express.Router();
+const moment = require('moment-timezone');
+//const { error } = require('console');
 
 mongoose.connect(mongoUrl, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-  .then(() => console.log('Connected to MongoDB!'))
-  .catch(error => console.error('Could not connect to MongoDB:', error));
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(error => console.error('ไม่สามารถเชื่อมต่อกับ MongoDB ได้:', error));
 
 const checkMongoConnection = () => {
-return mongoose.connection.readyState === 1;
+  return mongoose.connection.readyState === 1;
 };
 
-function normalizeLiquidType(tupe) {
-  if (!tupe) return 'unknown';
-  const trimmedType = tupe.trim().toLowerCase();
+function normalizeLiquidType(liquidType) {
+  if (!liquidType) return 'unknown';
+  const trimmedType = liquidType.trim().toLowerCase();
   if (trimmedType === 'น้ำ') return 'water';
   if (trimmedType === 'ปุ๋ย') return 'fertilizer';
   if (trimmedType === 'สารเคมี') return 'pesticide';
   return 'unknown';
 }
 
-// API input status from ESP32
 router.post('/esp32-status', async (req, res) => {
-  const { device_id, token, status} = req.body;
-  console.log('Received Data:', req.body); 
+  const { device_id, token, status } = req.body;
 
   if (!device_id || !token) {
-    return res.status(400).json({ success: false, message: 'Device ID and Token are required.' });
+    return res.status(400).send("Device ID and Token are required.");
   }
 
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
 
   try {
@@ -54,7 +51,6 @@ router.post('/esp32-status', async (req, res) => {
     device.last_update = new Date();
 
     await device.save();
-    console.log('Database Update Result:', device);
 
     res.json({ 
       success: true, 
@@ -66,14 +62,13 @@ router.post('/esp32-status', async (req, res) => {
       } 
     });
   } catch (error) {
-    console.error('Error updating MongoDB:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('เกิดข้อผิดพลาด:', error);
+    return res.status(500).send("Server error");
   }
 });
 
-// Token generation route
 router.post('/generate-token', async (req, res) => {
-  const { device_id } = req.body; 
+  const { device_id } = req.body;
   console.log('Received Request:', req.body);
 
   if (!device_id) {
@@ -81,18 +76,15 @@ router.post('/generate-token', async (req, res) => {
   }
 
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
-  
+
   try {
     const token = require('crypto').randomBytes(11).toString('hex');
     const result = await Esp32Status.findOneAndUpdate(
       { device_id },
       {
-        token, 
+        token,
         $setOnInsert: { status: "offline" }
       },
       { upsert: true, new: true }
@@ -106,56 +98,54 @@ router.post('/generate-token', async (req, res) => {
       status: result.status,
     });
   } catch (error) {
-    console.error('Error generating token:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('เกิดข้อผิดพลาด:', error);
+    res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์' });
   }
 });
 
-// API Data
-router.post('/esp32-data', authenticateDevice, async (req, res) => { 
-  const { device_id, plantType, liquidType, chemicalName, area, other, timestamp} = req.body;
-  if (!device_id || !plantType || !liquidType || !chemicalName || !area || !timestamp) {
-      return res.status(400).send('Missing required fields!');
+router.post('/esp32-data', authenticateDevice, async (req, res) => {
+  const { formID, device_id, plantType, liquidType, chemicalName, area, other, timestamp } = req.body;
+
+  if (!device_id || !plantType || !liquidType || !chemicalName || !area || !timestamp || !formID) {
+    return res.status(400).send("Missing required fields!");
   }
+
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
-  try {
-      const newData = new Esp32Data({ 
-        device_id, 
-        plantType, 
-        liquidType, 
-        chemicalName, 
-        area, 
-        other: other || '',
-        timestamp: new Date(timestamp),
-      });
 
-      await newData.save();
-      res.status(200).send('Data saved successfully!');
-  } catch (err) {
-      console.error('Error saving data:', err);
-      res.status(500).send('Server error!');
+  try {
+    const saveData = new Esp32Data({
+      formID,
+      device_id,
+      plantType,
+      liquidType: normalizeLiquidType(liquidType),
+      chemicalName,
+      area,
+      other: other || "",
+      timestamp: new Date(timestamp)
+    });
+
+    await saveData.save();
+    return res.status(200).send("Data saved/updated successfully!");
+
+  } catch (error) {
+    console.error('เกิดข้อผิดพลาด:', error);
+    return res.status(500).send("Server error");
   }
 });
 
-// API Sensor
 router.post('/esp32-sensor', authenticateDevice, async (req, res) => {
-  const { device_id, battery, pumpStatus, sprayRate, waterLevel ,timestamp, liquidType, flowRate } = req.body;
-  if (!device_id || battery == null || pumpStatus == null || sprayRate == null || waterLevel == null || !timestamp || flowRate == null) {
+  const { device_id, battery, pumpStatus, sprayRate, waterLevel, timestamp, liquidType, flowRate, totalVolume, formID } = req.body;
+  if (!device_id || !battery || !pumpStatus || !waterLevel || !timestamp || !flowRate || !totalVolume || !formID) {
     return res.status(400).send('Missing required fields!');
   }
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
   try {
     const newSensorData = new Esp32Sensor({
+      formID,
       device_id,
       battery,
       pumpStatus,
@@ -163,37 +153,30 @@ router.post('/esp32-sensor', authenticateDevice, async (req, res) => {
       flowRate,
       waterLevel,
       liquidType: normalizeLiquidType(liquidType),
-      timestamp: new Date(timestamp)
+      timestamp: new Date(timestamp),
+      totalVolume
     });
 
     await newSensorData.save();
     res.status(200).send('Sensor data saved successfully!');
   } catch (error) {
-    console.error('Error saving sensor data:', error);
-    res.status(500).send('Server error!');
+    console.error('เกิดข้อผิดพลาด:', error);
+    res.status(500).send('Server error');
   }
 });
 
-// ดึงข้อมูลอุปกรณ์จาก token
 router.get("/device/:token", async (req, res) => {
   const { token } = req.params;
 
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
 
   try {
     const device = await Esp32Status.findOne({ token }).lean();
 
     if (!device) {
-      console.log('Device not found');
-      return res.status(404).json({ 
-        success: false, 
-        message: "Device not found" 
-      });
+      return res.status(404).json({ success: false, message: "Device not found" });
     }
 
     res.json({
@@ -205,42 +188,25 @@ router.get("/device/:token", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching device:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error" 
-    });
+    console.error("เกิดข้อผิดพลาด:", error);
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 
-// ดึงสถานะอุปกรณ์
 router.get("/device-status/:device_id/:token", async (req, res) => {
   const { device_id, token } = req.params;
-  
-  console.log(`Checking status for device: ${device_id}`);
-  
+
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
 
   try {
-    const status = await Promise.race([
-      Esp32Status.findOne({ device_id, token }).lean(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Status query timeout')), 8000)
-      )
-    ]);
-    
+    const status = await Esp32Status.findOne({ device_id, token }).lean();
+
     if (!status) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Device status not found" 
-      });
+      return res.status(404).json({ success: false, message: "Device status not found" });
     }
-    
+
     res.json({
       success: true,
       data: {
@@ -250,139 +216,92 @@ router.get("/device-status/:device_id/:token", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching device status:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error" 
-    });
+    console.error("เกิดข้อผิดพลาด:", error);
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 
-// ดึงข้อมูล sensor
 router.get("/sensor-data/:device_id", async (req, res) => {
   const { device_id } = req.params;
-  
+
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
 
   try {
-    const sensorData = await Promise.race([
-      Esp32Sensor.findOne({ device_id }).sort({ timestamp: -1 }).lean(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sensor query timeout')), 8000)
-      )
-    ]);
-    
+    const sensorData = await Esp32Sensor.findOne({ device_id }).sort({ timestamp: -1 }).lean();
+    const latestData = await Esp32Data.findOne({ device_id }).sort({ timestamp: -1 }).lean();
+
     if (!sensorData) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "No sensor data found" 
-      });
+      return res.status(404).json({ success: false, message: "No sensor data found" });
+    }
+    if (!latestData) {
+      return res.status(404).json({ success: false, message: "No data log found" });
     }
 
     res.json({
       success: true,
       data: {
+        formID: latestData.formID,
         device_id: sensorData.device_id,
         battery: sensorData.battery,
         sprayRate: sensorData.sprayRate,
+        flowRate: sensorData.flowRate,
         waterLevel: sensorData.waterLevel,
+        totalVolume: sensorData.totalVolume,
         pumpStatus: sensorData.pumpStatus,
+        liquidType: sensorData.liquidType || "unknown",
         timestamp: sensorData.timestamp
       }
     });
   } catch (error) {
-    console.error("Error fetching sensor data:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error" 
-    });
+    console.error("เกิดข้อผิดพลาด:", error);
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 
-// ดึงข้อมูลสถานะหลายอุปกรณ์พร้อมกัน
-router.post("/devices-status", async (req, res) => {
-  const { devices } = req.body;
-  
-  if (!devices || !Array.isArray(devices)) {
-    return res.status(400).json({ 
-      success: false, 
-      message: "Invalid devices array" 
-    });
-  }
-
-  if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
-  }
-
-  try {
-    const statusPromises = devices.map(async ({ device_id, token }) => {
-      
-      try {
-        const status = await Esp32Status.findOne({ device_id, token }).lean();
-        const sensorData = await Esp32Sensor.findOne({ device_id }).sort({ timestamp: -1 }).lean();
-
-        return {
-          device_id,
-          status: status?.status || null,
-          last_update: status?.last_update || null,
-          hasSensorData: !!sensorData
-        };
-      } catch (error) {
-        console.error(`Error for device ${device_id}:`, error);
-      }
-    });
-
-    const results = await Promise.all(statusPromises);
-    
-    res.json({
-      success: true,
-      data: results
-    });
-  } catch (error) {
-    console.error("Error fetching devices status:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error" 
-    });
-  }
-});
-
-//ต้องการข้อมูล แบบ array
 router.get('/sensor-data/:device_id/latest10', async (req, res) => {
   const { device_id } = req.params;
 
   if (!device_id) {
-    return res.status(400).json({ error: "ต้องระบุ device_id" });
+    return res.status(400).json({ message: "ต้องระบุ device_id" });
   }
 
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
 
   try {
-    const data = await Esp32Sensor.find({ device_id }).sort({ timestamp: -1 }).limit(10).select().lean();
+    const latestForm = await Esp32Data.findOne({ device_id })
+      .sort({ timestamp: -1 })
+      .lean();
 
-    if (data.length === 0) {
-      return res.status(404).json({ error: "ไม่พบข้อมูลเซ็นเซอร์" });  
+    if (!latestForm) {
+      return res.status(404).json({ message: "ไม่พบข้อมูล Esp32Data ล่าสุด" });
+    }
+
+    const sensors = await Esp32Sensor.find({
+      device_id,
+      formID: latestForm.formID
+    })
+      .sort({ timestamp: 1 })
+      .limit(10)
+      .select(
+        'formID device_id battery flowRate waterLevel totalVolume pumpStatus liquidType timestamp'
+      )
+      .lean();
+
+    if (!sensors || sensors.length === 0) {
+      return res.status(404).json({ message: "ไม่พบข้อมูลเซ็นเซอร์" });
     }
 
     return res.json({
       success: true,
-      data: data.reverse()
+      count: sensors.length,
+      data: sensors
     });
   } catch (error) {
-    console.error("Error getting sensor data:", error.message);
+    console.error("เกิดข้อผิดพลาด::", error);
     return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
@@ -391,26 +310,26 @@ router.get('/esp32-data/:device_id', async (req, res) => {
   const { device_id } = req.params;
 
   if (!device_id) {
-    return res.status(400).json({ error: "ต้องระบุ device_id" });
+    return res.status(400).json({ message: "ต้องระบุ device_id" });
   }
 
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
+    return res.status(503).json({
+      success: false,
+      message: "MongoDB not connected"
     });
   }
 
   try {
-    const latestData = await Esp32Data.findOne({ device_id }).sort({ timestamp: -1 }).select('device_id plantType liquidType chemicalName area other timestamp');
+    const dataLogs = await Esp32Data.findOne({ device_id }).sort({ timestamp: -1 }).select('formID device_id plantType liquidType chemicalName area other timestamp');
 
-    if (!latestData) {
-      return res.status(404).json({ error: "ไม่พบข้อมูล sensor ล่าสุด" });
+    if (!dataLogs) {
+      return res.status(404).json({ message: "ไม่พบข้อมูล sensor ล่าสุด" });
     }
 
     return res.json({
       success: true,
-      data: latestData,
+      data: dataLogs,
     });
   } catch (error) {
     console.error("เกิดข้อผิดพลาด:", error.message);
@@ -419,50 +338,43 @@ router.get('/esp32-data/:device_id', async (req, res) => {
 });
 
 router.get('/esp32-status', async (req, res) => {
-
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
+
   try {
-    const statuses = await Esp32Status.find().lean();
+    const dataLogs = await Esp32Status.find().lean();
+
+    if (!dataLogs) {
+      return res.status(404).json({ error: "ไม่พบข้อมูล" })
+    };
+
     res.json({
       success: true,
-      data: statuses
+      data: dataLogs
     });
-  } catch (err) {
-    console.error("Error fetching ESP32 statuses:", err.message);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาด::", error.message);
+    return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 
-// ดึงข้อมูลการใช้งานสารเคมี
 router.get("/spray-logs", async (req, res) => {
   const { device_id, startDate, endDate } = req.query;
   if (!device_id || !startDate || !endDate) {
-    return res.status(400).json({ error: "Missing required parameters" });
+    return res.status(400).json({ message: "Missing required parameters" });
   }
 
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
+    return res.status(503).json({
+      success: false,
+      message: "MongoDB not connected"
     });
   }
 
   try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (start.toDateString() === end.toDateString()) {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    }
+    const start = moment.utc(startDate, "YYYY-MM-DD").startOf("day").toDate();
+    const end = moment.utc(endDate, "YYYY-MM-DD").endOf("day").toDate();
 
     const dataLogs = await Esp32Data.find({
       device_id,
@@ -475,114 +387,25 @@ router.get("/spray-logs", async (req, res) => {
 
     res.json({ success: true, data: dataLogs });
   } catch (error) {
-    console.error("Error fetching MongoDB spray logs:", error);
-    res.status(500).json({ error: "MongoDB server error" });
+    console.error("เกิดข้อผิดพลาด:", error);
+    return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 
-// /mongodb/chemical-usage-by-type
-router.get("/chemical-usage-by-type", async (req, res) => {
+router.get("/usage-history", async (req, res) => {
   const { device_id, startDate, endDate } = req.query;
 
   if (!device_id || !startDate || !endDate) {
-    return res.status(400).json({ error: "Missing required parameters" });
+    return res.status(400).json({ message: "Parameter ไม่ครบ" });
   }
 
   if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
   }
 
   try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start.toDateString() === end.toDateString()) {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    }
-
-    const sensors = await Esp32Sensor.find({ 
-      device_id, 
-      timestamp: { $gte: start, $lte: end }
-    }).sort({ timestamp: 1 });
-
-    if (!sensors || sensors.length === 0) {
-      return res.status(404).json({ error : "No Datas Sensors"})
-    }
-
-    const usageByType = { water: 0, fertilizer: 0, pesticide: 0 };
-    const factor = 1;
-    const typeMap = {
-      water: [],
-      fertilizer: [],
-      pesticide: []
-    };
-
-    for (const sensor of sensors) {
-      const type = (sensor.liquidType || "").toLowerCase().trim();
-      if (typeMap[type]) {
-        typeMap[type].push(sensor);
-      }
-    }
-
-    for (const type in typeMap) {
-      const list = typeMap[type];
-      for (let i = 1; i < list.length; i++) {
-        const prev = list[i - 1];
-        const curr = list[i];
-
-        if (!(prev.pumpStatus === "ON" && Number(prev.flowRate) > 0)) continue
-        const flowRate = Number(prev.flowRate);
-        const durationSec = Math.min((curr.timestamp - prev.timestamp) / 1000, 60);
-        const added = flowRate * (durationSec / 60) * factor;
-        usageByType[type] += added;
-      }
-    }
-
-    for (const type in usageByType) {
-      usageByType[type] = parseFloat(usageByType[type].toFixed(2));
-    }
-
-    res.json({
-      success: true,
-      data: usageByType,
-      totalSensors: sensors.length,
-    });
-  } catch (error) {
-    console.error("MongoDB error:", error);
-    res.status(500).json({ error: "MongoDB server error" });
-  }
-});
-
-router.get("/chemical-usage-history", async (req, res) => {
-  const { device_id, startDate, endDate } = req.query;
-
-  if (!device_id || !startDate || !endDate) {
-    return res.status(400).json({ error: "Missing required parameters" });
-  }
-
-  if (!checkMongoConnection()) {
-    return res.status(503).json({ 
-      success: false, 
-      message: "MongoDB not connected" 
-    });
-  }
-
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start.toDateString() === end.toDateString()) {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    }
+    const start = moment.tz(startDate, "YYYY-MM-DD").startOf("day").toDate();
+    const end = moment.tz(endDate, "YYYY-MM-DD").endOf("day").toDate();
 
     const DataLogs = await Esp32Data.find({
       device_id,
@@ -592,108 +415,137 @@ router.get("/chemical-usage-history", async (req, res) => {
     const SensorLogs = await Esp32Sensor.find({
       device_id,
       timestamp: { $gte: start, $lte: end },
-    }).sort({ timestamp: 1 });
+    })
+      .sort({ timestamp: 1 })
+      .select("formID timestamp flowRate pumpStatus liquidType totalVolume");
 
     if ((!DataLogs || DataLogs.length === 0) && (!SensorLogs || SensorLogs.length === 0)) {
       return res.status(404).json({ error: "No data found for the specified device and date range" });
     }
 
-    const groupedTime = {};
-    const groupedUsage = {};
+    const isPumpOn = (item) => {
+      if (typeof item === "string") {
+        const items = item.trim().toLowerCase();
+        return items === "on";
+      }
+      return false;
+    };
 
-    for (const log of DataLogs) {
-      const logTime = new Date(log.timestamp);
-      const rangeStart = new Date(logTime.getTime() - 15 * 60 * 1000);
-      const rangeEnd = new Date(logTime.getTime() + 15 * 60 * 1000);
-      const sensorsInRange = SensorLogs.filter(sensor => {
-        const sensorTime = new Date(sensor.timestamp);
-        return sensorTime >= rangeStart && sensorTime <= rangeEnd;
-      });
+    const usageHistory = [];
 
+    for (const data of DataLogs) {
+      const sensorsForFormId = SensorLogs.filter((s) => s.formID === data.formID);
       let usageSec = 0;
-      let usageLiters = 0;
 
-      
-      for (let i = 1; i < sensorsInRange.length; i++) {
-        const prev = sensorsInRange[i - 1];
-        const curr = sensorsInRange[i];
+      if (sensorsForFormId.length >= 2) {
+        for (let i = 1; i < sensorsForFormId.length; i++) {
+          const prev = sensorsForFormId[i - 1];
+          const curr = sensorsForFormId[i];
 
-        if (!(prev.pumpStatus === "ON" && Number(prev.flowRate) > 0)) continue; 
+          if (!isPumpOn(prev.pumpStatus)) continue;
 
-        const prevTime = new Date(prev.timestamp);
-        const currTime = new Date(curr.timestamp);
+          const prevTime = new Date(prev.timestamp);
+          const currTime = new Date(curr.timestamp);
+          const durationSec = (currTime - prevTime) / 1000;
 
-        const durationSec = Math.min((currTime - prevTime) / 1000, 60);
-        if (durationSec <= 0 || durationSec >= 90) continue;
-
-        const durationMin = durationSec / 60;
-        const flowRate = Number(prev.flowRate) || 0;
-        const usedLiters = flowRate * durationMin;
-
-        usageSec += durationSec;
-        usageLiters += usedLiters;
+          if (durationSec > 0 && durationSec < 600) {
+            usageSec += durationSec;
+          }
+        }
       }
 
-      const logDate = logTime.toISOString().split("T")[0];
-      if (!groupedTime[logDate]) groupedTime[logDate] = 0;
-      if (!groupedUsage[logDate]) groupedUsage[logDate] = 0;
+      const latestSensor = sensorsForFormId[sensorsForFormId.length - 1];
+      const totalVolume = latestSensor ? Number(latestSensor.totalVolume) || 0 : 0;
 
-      groupedTime[logDate] += usageSec;
-      groupedUsage[logDate] += usageLiters;
+      usageHistory.push({
+        formID: data.formID,
+        _id: data._id,
+        plantType: data.plantType,
+        liquidType: data.liquidType,
+        chemicalName: data.chemicalName,
+        area: data.area,
+        other: data.other || "",
+        timestamp: data.timestamp,
+        usageTime: parseFloat((usageSec / 60).toFixed(2)),
+        totalVolume: parseFloat(totalVolume.toFixed(2)),
+      });
     }
 
-    for (const date in groupedTime) {
-      groupedTime[date] = parseFloat((groupedTime[date] / 60).toFixed(2));
+    return res.json({ success: true, data: { device_id, usageHistory } });
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาด:", error);
+    return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+  }
+});
+
+router.put("/EditData-MongoDB/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const updated = await Esp32Data.findByIdAndUpdate(id, req.body, { new: true });
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูล Id นี้" });
     }
-    for (const date in groupedUsage) {
-      groupedUsage[date] = parseFloat(groupedUsage[date].toFixed(2));
+
+    res.json(
+      {
+        success: true,
+        data: updated
+      });
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาด:", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+  }
+});
+
+router.delete("/deleteDataRobot/:device_id", async (req, res) => {
+  const { device_id } = req.params;
+
+  if (!device_id) {
+    return res.status(400).json({ success: false, message: "ต้องระบุ device_id" });
+  }
+
+  if (!checkMongoConnection()) {
+    return res.status(503).json({ success: false, message: "MongoDB not connected" });
+  }
+
+  try {
+    const statusRes = await Esp32Status.deleteMany({ device_id });
+    const dataRes = await Esp32Data.deleteMany({ device_id });
+    const sensorRes = await Esp32Sensor.deleteMany({ device_id });
+
+    const totalDeleted =
+      (statusRes.deletedCount || 0) +
+      (dataRes.deletedCount || 0) +
+      (sensorRes.deletedCount || 0);
+
+    if (totalDeleted === 0) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลสำหรับ device_id นี้" });
     }
 
     res.json({
       success: true,
-      data: {
-        device_id,
-        usageHistory: DataLogs.map((log) => {
-          const logDate = new Date(log.timestamp).toISOString().split("T")[0];
-          return {
-            _id: log._id,
-            plantType: log.plantType,
-            liquidType: log.liquidType,
-            chemicalName: log.chemicalName,
-            area: log.area,
-            other: log.other || "",
-            timestamp: log.timestamp,
-            groupedTime: groupedTime[logDate] || 0,
-            groupedUsage: groupedUsage[logDate] || 0,
-          };
-        }),
-        groupedTime,
-        groupedUsage,
+      message: "ลบข้อมูลทั้งหมดสำเร็จ",
+      deleted: {
+        status: statusRes.deletedCount,
+        data: dataRes.deletedCount,
+        sensor: sensorRes.deletedCount,
       },
     });
   } catch (error) {
-    console.error("Error fetching MongoDB chemical usage history:", error);
-    return res.status(500).json({ error: "MongoDB server error" });
+    console.error("❌ เกิดข้อผิดพลาดในการลบ:", error);
+    return res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 
-router.put("/mongo-history/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const updated = await Esp32Data.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
-
-    if (!updated) {
-      return res.status(404).json({ success: false, message: "ไม่พบข้อมูล MongoDB" });
-    }
-
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    console.error("Mongo PUT error:", err);
-    res.status(500).json({ success: false, message: "MongoDB error" });
-  }
-});
+// router.get("/api/esp32data-app", async (req, res) => {
+//   try {
+//     const data = await Esp32Data.find().sort({ timestamp: -1 });
+//     res.json({ success: true, count: data.length, data });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// });
 
 module.exports = router;

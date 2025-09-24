@@ -206,31 +206,34 @@
 
 @media screen and (max-width: 1400px) {
 
-    html,
-    body {
-        overflow-x: hidden;
-    }
-
     .main-home {
         display: grid;
-        max-width: 100%;
+        width: 85%;
         margin: 0;
         gap: 1.8rem;
         grid-template-columns: auto;
         margin-top: 1.4rem;
         margin-left: 200px;
         padding: 1.4rem;
+
+    }
+
+    .haeder-graph-contens{
+        flex-direction: column;
     }
 
     .data {
-        width: 30vw;
-        height: 37vh;
-        padding: 1rem;
+        width: 100%;
+        padding: 1.5rem;
         border-radius: 1.8rem;
         margin-top: 1.4rem;
         background: white;
         box-shadow: 0 2rem 3rem #dce1ed;
         transition: all 300ms ease;
+    }
+
+    .graph-contens{
+        width: 100%;
     }
 
     .data p {
@@ -246,8 +249,8 @@
 @media screen and (min-width: 768px) and (max-width: 1024px) {
     .main-home {
         display: grid;
-        width: 60%;
-        max-width: 1000px;
+        width: 85%;
+        /* max-width: 1000px; */
         margin: 1.4rem auto 0 auto;
         padding: 2rem;
         gap: 1.8rem;
@@ -259,7 +262,6 @@
 
     .graph-contens {
         padding: 2rem;
-        height: 19vh;
     }
 
     .data {
@@ -279,7 +281,7 @@
 @media screen and (max-width: 767px) {
     .main-home {
         display: grid;
-        max-width: 48%;
+        width: 100%;
         margin: 0 auto;
         gap: 1.8rem;
         grid-template-columns: auto;
@@ -294,8 +296,7 @@
     }
 
     .graph-contens {
-        width: 65vw;
-        height: 27vh;
+        width: 100%;
         padding: 1.5rem;
         border-radius: 2rem;
         margin-top: 1.4rem;
@@ -306,8 +307,7 @@
     }
 
     .data {
-        width: 65vw;
-        height: 27vh;
+        width: 100%;
         padding: 2rem;
         border-radius: 2rem;
         margin-top: 1.4rem;

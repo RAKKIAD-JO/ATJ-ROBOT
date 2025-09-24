@@ -72,12 +72,8 @@ export default function Sidebar() {
                     setRobots(data.robots);
 
                 } else {
-                    console.warn("API ตอบกลับไม่สำเร็จ", data);
                     setRobots([]);
                 }
-                 
-            
-
                 setHasFetched(true);
             } catch (error) {
                 if (
@@ -86,9 +82,7 @@ export default function Sidebar() {
                   "name" in error &&
                   typeof (error as { name?: unknown }).name === "string" &&
                   (error as { name?: string }).name !== "AbortError"
-                ) {
-                    console.error("Fetch robots ผิดพลาด:", error);
-                }
+                )
                 setRobots([]);
             } finally {
                 setLoadingRobots(false);
@@ -204,7 +198,7 @@ export default function Sidebar() {
 
                         {showRobots && (
                             <div className="robot-popup" ref={robotPopupRef}>
-                                <div className="robot-popup-content">
+                                <div className="robot-popup-content scrollable-robot-list">
                                     {loadingRobots ? (
                                         <p>กำลังโหลด...</p>
                                     ) : robots.length > 0 ? (

@@ -20,6 +20,7 @@ type SensorData = {
   flow: number;
   water: number;
   time: string;
+  totalVolume: number;
 };
 
 type Props = {
@@ -45,7 +46,6 @@ const SystemChart = ({ deviceId }: Props) => {
 
       try {
         const sensorList: RawSensorData[] = await fetchLatestSensorData(deviceId);
-        console.log("Fetched sensor list:", sensorList);
         const formattedData = sensorList.map((item) => {
           const date = new Date(item.timestamp);
           const timeStr = date.toLocaleTimeString("th-TH", {
@@ -58,6 +58,7 @@ const SystemChart = ({ deviceId }: Props) => {
             battery: item.battery,
             flow: item.sprayRate,
             water: item.waterLevel,
+            totalVolume: item.totalVolume,
             time: timeStr,
           };
         });
@@ -101,7 +102,7 @@ const SystemChart = ({ deviceId }: Props) => {
           <Tooltip />
           <Legend verticalAlign="top" height={36} />
           <Line type="monotone" dataKey="battery" stroke="#28a745" strokeWidth={2} name="Battery Level" />
-          <Line type="monotone" dataKey="flow" stroke="#17a2b8" strokeWidth={2} name="Flow Rate" />
+          <Line type="monotone" dataKey="totalVolume" stroke="#17a2b8" strokeWidth={2} name="Total Volume" />
           <Line type="monotone" dataKey="water" stroke="#f5732dff" strokeWidth={2} name="Water Level" />
         </LineChart>
       </ResponsiveContainer>

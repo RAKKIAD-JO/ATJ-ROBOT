@@ -27,7 +27,6 @@ export default function Home() {
   const [sensorData, setSensorData] = useState<SensorDataType | null>(null);
   const [loadingSensor, setLoadingSensor] = useState(false);
   const [loadingDataType, setLoadingDataType] = useState(false);
-  //const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [dataType, setDataType] = useState<Esp32DataType | null>(null);
   const [modalMessage, setModalMessage] = useState<string | null>(null);
@@ -131,7 +130,7 @@ export default function Home() {
   }, [errorMessage]);
 
   const batteryPercent = Number(sensorData?.battery) || 0;
-  const flowRatePercent = Number(sensorData?.sprayRate) || 0;
+  const totalVolume = Number(sensorData?.totalVolume) || 0;
   const waterLevelPercent = Number(sensorData?.waterLevel) || 0;
 
   if (loadingSensor && loadingDataType) {
@@ -182,11 +181,11 @@ export default function Home() {
                 </div>
                 <div className="box-flow-water">
                   <div className="flow-water-text">
-                    <p>อัตราการไหล</p>
+                    <p>น้ำที่ใช้ไป</p>
                     <p>Total</p>
                   </div>
                   <div className="flow-water-value">
-                    <DonutChart label="อัตราไหล" value={Number(flowRatePercent.toFixed(2))} color="rgba(54, 162, 235, 0.7)" mode="usage" />
+                    <DonutChart label="น้ำที่ใช้ไป" value={Number(totalVolume.toFixed(2))} color="rgba(54, 162, 235, 0.7)" mode="usage" />
                   </div>
                 </div>
               </div>
@@ -241,7 +240,6 @@ export default function Home() {
                     <p>ชนิดพืช : {dataType?.plantType}</p>
                     <p>ประเภทของของเหลว : {dataType?.liquidType}</p>
                     <p>ชื่อสารเคมี : {dataType?.chemicalName}</p>
-                    {/*<p>ปริมาณการใช้สารเคมี : {dataType?.chemicalAmount}</p>*/}
                     <p>พื้นที่ : {dataType?.area}</p>
                     <p>อื่นๆ : {dataType?.other || <span className="no-data">ไม่มีข้อมูล</span>}</p>
                     <p>ระยะเวลาที่เริ่ม : {dataType?.timestamp}</p>

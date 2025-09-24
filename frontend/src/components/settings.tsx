@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [profileFullName, setProfileFullName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
+  const [profileImagePath, setProfileImagePath] = useState<File | null>(null);
   const router = useRouter();
 
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -80,6 +81,9 @@ export default function SettingsPage() {
         showModal("รูปห้ามใหญ่เกิน 2MB", 'error');
         return;
       }
+
+      setProfileImagePath(file);
+
       const reader = new FileReader();
       reader.onload = () => {
         setProfileImage(reader.result as string);
@@ -111,8 +115,9 @@ export default function SettingsPage() {
       if (newPassword) {
         formData.append('newPassword', newPassword);
       }
-      if (fileInputRef.current?.files?.[0]) {
-        formData.append('profileImage', fileInputRef.current.files[0]);
+
+      if (profileImagePath) {
+        formData.append('profileImage', profileImagePath);
       }
 
       if ([...formData.keys()].length === 0) {
@@ -122,8 +127,8 @@ export default function SettingsPage() {
 
       const response = await fetch('/api/users/profile', {
         method: 'PUT',
-        body: formData,
-        credentials: 'include'
+        credentials: 'include',
+        body: formData
       });
 
       if (response.status === 403) {
@@ -192,7 +197,9 @@ export default function SettingsPage() {
             onChange={handleUpload}
             style={{ display: 'none' }}
           />
-
+          <div className="error">
+          {errorMessage && <p className="error-message">{errorMessage}</p>}
+          </div>
           <div className="form-group">
             <div className="column">
               <label>ชื่อ-นามสกุล</label>
@@ -251,7 +258,6 @@ export default function SettingsPage() {
                   {showConfirmPassword ? "visibility" : "visibility_off"}
                 </span>
               </div>
-              {errorMessage && <p className="error-message">{errorMessage}</p>}
             </div>
 
             <div className="column">
@@ -270,27 +276,27 @@ export default function SettingsPage() {
       </div>
       {modalMessage && (
         <div className="modal-overlay">
-            <div className="modal-box">
-                <button className="modal-close" onClick={closeModal}>×</button>
-                {modalType === "success" ? (
-                    <div className="checkmark-animation">
-                        <svg viewBox="0 0 52 52" className="checkmark">
-                            <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
-                            <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
-                        </svg>
-                    </div>
-                ) : (
-                    <div className="crossmark-animation">
-                        <svg viewBox="0 0 52 52" className="crossmark">
-                            <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
-                            <path className="crossmark-line1" d="M16 16 L36 36" />
-                            <path className="crossmark-line2" d="M36 16 L16 36" />
-                        </svg>
-                    </div>
-                )}
-                <p>{modalMessage}</p>
-                <button className="modal-ok" onClick={closeModal}>ตกลง</button>
-            </div>
+          <div className="modal-box">
+            <button className="modal-close" onClick={closeModal}>×</button>
+            {modalType === "success" ? (
+              <div className="checkmark-animation">
+                <svg viewBox="0 0 52 52" className="checkmark">
+                  <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
+                  <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
+                </svg>
+              </div>
+            ) : (
+              <div className="crossmark-animation">
+                <svg viewBox="0 0 52 52" className="crossmark">
+                  <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
+                  <path className="crossmark-line1" d="M16 16 L36 36" />
+                  <path className="crossmark-line2" d="M36 16 L16 36" />
+                </svg>
+              </div>
+            )}
+            <p>{modalMessage}</p>
+            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+          </div>
         </div>
       )}
     </main>

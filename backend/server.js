@@ -5,8 +5,6 @@ const usersRouter = require("./users");
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const robotRoutes = require('./robot/robot');
-const swaggerUi = require('swagger-ui-express');
-const swaggerFile = require('./swagger-output.json');
 const cors = require('cors');
 
 app.use(cors({
@@ -18,7 +16,7 @@ const port = 5000;
 
 app.use(express.json()); 
 app.use(cookieParser());
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+
 app.use('/robot', robotRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/users", usersRouter);

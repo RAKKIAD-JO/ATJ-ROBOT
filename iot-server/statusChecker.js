@@ -21,27 +21,19 @@ async function checkAndUpdateStatuses() {
 }
 
 async function checkingDataandDelete() {
-  const now = new Date();
-  const nowThailand = new Date(now.getTime() + 7 * 60 * 60 * 1000); // +7 ชั่วโมง
-  const MonthsDelete = `${process.env.MONTHS_AGO}`;
-  
-  // เดือนก่อน
-  const MonthsAgo = new Date();
-  MonthsAgo.setMonth(now.getMonth() - Number(process.env.MONTHS_AGO));
+  try {
+    const now = new Date();
+    const daysAgo = Number(process.env.MONTHS_DELETED);
+    const dateThreshold = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 
-  console.log("เวลาปัจจุบัน (UTC):", nowThailand.toISOString());
-  console.log("เวลาเก่า (", MonthsDelete, " เดือน):", MonthsAgo.toISOString());
+    await Esp32Data.deleteMany({ timestamp: { $lt: dateThreshold } });
+    await Esp32Sensors.deleteMany({ timestamp: { $lt: dateThreshold } });
 
-  // ดูตัวอย่างข้อมูลเก่า
-  const oldDataEsp32 = await Esp32Data.find({ timestamp: { $lt: MonthsAgo } });
-  const oldDataSensors = await Esp32Sensors.find({ timestamp: { $lt: MonthsAgo } });
-
-  console.log("จำนวน esp32data เก่า:", oldDataEsp32.length);
-  console.log("จำนวน esp32sensors เก่า:", oldDataSensors.length);
-
-  // ลบข้อมูล
-  await Esp32Data.deleteMany({ timestamp: { $lt: MonthsAgo } });
-  await Esp32Sensors.deleteMany({ timestamp: { $lt: MonthsAgo } });
+    console.log(`Old data older than ${daysAgo} days deleted successfully!`);
+  } catch (error) {
+    console.error("Error deleting old data:", error);
+  }
 }
+
 
 module.exports = { checkAndUpdateStatuses, checkingDataandDelete };

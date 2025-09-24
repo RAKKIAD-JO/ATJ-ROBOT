@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../postgres"); 
+const db = require("../postgres");
 const axios = require("axios");
 const authenticateToken = require('../middleware/auth');
 require('dotenv').config();
@@ -19,7 +19,7 @@ router.post("/connect-robot", authenticateToken, async (req, res) => {
     const response = await axios.get(`${API_SERVER_URL}/api/device/${token}`);
 
     if (!response.data.success) {
-      return res.status(404).json({ success: false, message: "token ไม่พบในระบบ" });
+      return res.status(404).json({ success: false, message: "รหัสหุุ่นยนต์ไม่ถููกต้อง" });
     }
 
     const device_id = response.data.data.device_id;
@@ -33,10 +33,11 @@ router.post("/connect-robot", authenticateToken, async (req, res) => {
         RETURNING *
       `;
       const insertResult = await db.query(insertQuery, [user_Id, token, robot_name, device_id]);
-      return res.json({ 
-        success: true, 
-        message: "เชื่อมต่อหุ่นยนต์สำเร็จ", 
-        user: insertResult.rows[0] });
+      return res.json({
+        success: true,
+        message: "เชื่อมต่อหุ่นยนต์สำเร็จ",
+        user: insertResult.rows[0]
+      });
     } else {
       const existing = selectResult.rows[0];
       if (
@@ -57,129 +58,63 @@ router.post("/connect-robot", authenticateToken, async (req, res) => {
       }
     }
   } catch (error) {
-    console.error("Connect robot error:", error.message);
-    
-    if (error.message.includes('API server not available')) {
-      return res.status(503).json({ 
-        success: false, 
-        message: "ระบบไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง" 
-      });
-    }
-    
     if (error.response?.status === 404) {
       return res.status(404).json({ success: false, message: "token ไม่พบในระบบ" });
     }
-    
     res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
-
-// GET /robot/my_robot - ดึงรายการหุ่นยนต์ของผู้ใช้
+//ดึงรายการหุ่นยนต์ของผู้ใช้
 router.get("/my_robot", authenticateToken, async (req, res) => {
   const userId = req.userId;
-
   try {
     const pgClient = await db.connect();
     try {
-      const query = `
-        SELECT robots_id, robot_name, token, device_id 
-        FROM robots 
-        WHERE user_id = $1
-      `;
+      const query = `SELECT robots_id, robot_name, token, device_id FROM robots WHERE user_id = $1`;
       const result = await pgClient.query(query, [userId]);
 
       if (result.rows.length === 0) {
-        return res.json({ 
-          success: true, 
-          robots: [] 
-        });
+        return res.json({ success: true, robots: [] });
       }
-      const devices = result.rows.map(robot => ({
-        device_id: robot.device_id,
-        token: robot.token
-      }));
       try {
-        const statusResponse = await axios.post(`${API_SERVER_URL}/api/devices-status`, 
-          { devices }
-        );
-
-        if (statusResponse.data.success) {
-          const robotsWithStatus = result.rows.map(robot => {
-            const statusData = statusResponse.data.data.find(
-              item => item.device_id === robot.device_id
-            );
-            
-            return {
-              robot_id: robot.robots_id,
-              robot_name: robot.robot_name,
-              device_id: robot.device_id,
-              lastSeen: statusData?.last_update,
-              hasSensorData: statusData?.hasSensorData || false,
-              status: statusData?.status
-            };
-          });
-
-          return res.json({ 
-            success: true, 
-            robots: robotsWithStatus 
-          });
-        } else {
-          const robotsWithBasicData = result.rows.map(robot => ({
-            ...robot,
-            lastSeen: null,
-            hasSensorData: false,
-            status: 'unknown'
-          }));
-
-          return res.json({ 
-            success: true, 
-            robots: robotsWithBasicData,
-            warning: "ไม่สามารถดึงสถานะล่าสุดได้"
-          });
-        }
-      } catch (apiError) {
-        console.error('API call failed:', apiError.message);
-        
-        const robotsWithBasicData = result.rows.map(robot => ({
-          ...robot,
-          lastSeen: null,
-          hasSensorData: false,
-          status: 'unknown'
-        }));
-
-        return res.json({ 
-          success: true, 
-          robots: robotsWithBasicData,
-          warning: "ระบบสถานะไม่พร้อมใช้งาน"
+        const robotsWithStatus = result.rows.map(robot => {
+          return {
+            robot_id: robot.robots_id,
+            robot_name: robot.robot_name,
+            device_id: robot.device_id,
+          };
         });
+
+        return res.json({
+          success: true,
+          robots: robotsWithStatus
+        });
+
+      } catch (error) {
+        console.error('API call failed:', error.message);
+        return res.json({ success: false, error: "ระบบสถานะไม่พร้อมใช้งาน" });
       }
     } finally {
       pgClient.release();
     }
-  } catch (err) {
-    console.error('Error fetching robots:', err);
+  } catch (error) {
+    console.error('Error fetching robots:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์' });
   }
 });
-
 // GET /robot/sensor-data/:robot_id - ดึงข้อมูล sensor
 router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
   const { robot_id } = req.params;
   const user_id = req.userId;
   const isAdmin = req.isAdmin;
 
-  console.log(`📊 Sensor data request - Robot ID: ${robot_id}, User ID: ${user_id}`);
-
   if (isNaN(robot_id)) {
-    return res.status(400).json({ error: "robot_id ต้องเป็นตัวเลข" });
+    return res.status(400).json({ success: false, error: "robot_id ต้องเป็นตัวเลข" });
   }
 
   try {
     const pgClient = await db.connect();
     try {
-
-      console.log('🔍 Checking robot ownership...');
-
       const robotQuery = isAdmin
         ? `SELECT device_id, token FROM robots WHERE robots_id = $1`
         : `SELECT device_id, token FROM robots WHERE robots_id = $1 AND user_id = $2`;
@@ -189,89 +124,62 @@ router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
         : await pgClient.query(robotQuery, [robot_id, user_id]);
 
       if (robotResult.rows.length === 0) {
-        console.log('❌ Robot not found or not owned by user');
-        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+        return res.status(403).json({ success: false, error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
 
       const { device_id, token } = robotResult.rows[0];
-      console.log(`📱 Device ID: ${device_id}, Token: ${token?.substring(0, 10)}...`);
 
       if (!device_id || !token) {
-        return res.status(400).json({ error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
+        return res.status(400).json({ success: false, error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
+      }
+      const [statusResponse, sensorResponse] = await Promise.all([
+        axios.get(`${API_SERVER_URL}/api/device-status/${device_id}/${token}`),
+        axios.get(`${API_SERVER_URL}/api/sensor-data/${device_id}`)
+      ]);
+
+      if (!statusResponse.data.success) {
+        return res.status(404).json({ success: false, error: "ไม่พบอุปกรณ์ในระบบ" });
       }
 
-      try {
-        // เรียก API เพื่อดึงสถานะอุปกรณ์
-        console.log('🔍 Fetching device status...');
-        const [statusResponse, sensorResponse] = await Promise.all([
-          axios.get(`${API_SERVER_URL}/api/device-status/${device_id}/${token}`),
-          axios.get(`${API_SERVER_URL}/api/sensor-data/${device_id}`)
-        ]);
-
-        if (!statusResponse.data.success) {
-          return res.status(404).json({ error: "ไม่พบอุปกรณ์ในระบบ" });
-        }
-
-        if (!sensorResponse.data.success) {
-          return res.status(404).json({ error: "ยังไม่มีข้อมูล sensor" });
-        }
-
-        const statusData = statusResponse.data.data;
-        const sensorData = sensorResponse.data.data;
-
-        console.log('✅ Data retrieved successfully');
-        return res.json({
-          device_id: statusData.device_id,
-          battery: sensorData.battery,
-          sprayRate: sensorData.sprayRate,
-          waterLevel: sensorData.waterLevel,
-          pumpStatus: sensorData.pumpStatus,
-          timestamp: sensorData.timestamp,
-          deviceStatus: statusData.status,
-          lastUpdate: statusData.last_update,
-        });
-
-      } catch (apiError) {
-        console.error("🚨 API call error:", apiError.message);
-        
-        if (apiError.message.includes('API server not available')) {
-          return res.status(503).json({ 
-            error: "ระบบข้อมูลไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง" 
-          });
-        }
-        
-        if (apiError.message.includes('timeout')) {
-          return res.status(503).json({ 
-            error: "ระบบตอบสนองช้า กรุณาลองใหม่อีกครั้ง" 
-          });
-        }
-
-        if (apiError.response?.status === 404) {
-          return res.status(404).json({ 
-            error: apiError.response.data.message || "ไม่พบข้อมูล" 
-          });
-        }
-        
-        return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+      if (!sensorResponse.data.success) {
+        return res.status(404).json({ success: false, error: "ยังไม่มีข้อมูล sensor" });
       }
+
+      const statusData = statusResponse.data.data;
+      const sensorData = sensorResponse.data.data;
+
+      return res.json({
+        device_id: statusData.device_id,
+        battery: sensorData.battery,
+        sprayRate: sensorData.sprayRate,
+        waterLevel: sensorData.waterLevel,
+        totalVolume: sensorData.totalVolume,
+        flowRate: sensorData.flowRate,
+        pumpStatus: sensorData.pumpStatus,
+        timestamp: sensorData.timestamp,
+        deviceStatus: statusData.status,
+        lastUpdate: statusData.last_update,
+      });
     } finally {
       pgClient.release();
     }
   } catch (error) {
+    if (error.response?.status === 404) {
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูล" });
+    }
     console.error("🚨 Database error:", error.message);
-    return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+    return res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
-
-// GET /robot/sensor-data/:robot_id/latest10
+// Home latest 10 data
 router.get("/sensor-data/:robot_id/latest10", authenticateToken, async (req, res) => {
   const robotId = parseInt(req.params.robot_id, 10);
   const userId = req.userId;
   const isAdmin = req.isAdmin;
-  
+
 
   if (isNaN(robotId)) {
-    return res.status(400).json({ error: "robot_id ต้องเป็นตัวเลข" });
+    return res.status(400).json({ success: false, message: "robot_id ต้องเป็นตัวเลข" });
   }
 
   try {
@@ -286,44 +194,32 @@ router.get("/sensor-data/:robot_id/latest10", authenticateToken, async (req, res
         : await pgClient.query(robotQuery, [robotId, userId]);
 
       if (robotResult.rows.length === 0) {
-        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+        return res.status(403).json({ success: false, message: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
 
       const { device_id, token } = robotResult.rows[0];
 
       if (!device_id || !token) {
-        return res.status(400).json({ error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
+        return res.status(400).json({ success: false, message: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
       }
 
       const response = await axios.get(`${API_SERVER_URL}/api/sensor-data/${device_id}/latest10`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        timeout: 10000
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       return res.json(response.data.data);
-      
 
     } finally {
       pgClient.release();
     }
   } catch (error) {
-    console.error("❌ Error fetching sensor data:", error.message);
-
     if (error.response?.status === 404) {
-      return res.status(404).json({ error: "ไม่พบข้อมูลเซ็นเซอร์จากอุปกรณ์นี้" });
+      return res.status(404).json({ message: "ไม่พบข้อมูลเซ็นเซอร์จากอุปกรณ์นี้" });
     }
-
-    if (error.code === 'ECONNREFUSED') {
-      return res.status(503).json({ error: "ไม่สามารถเชื่อมต่อ API MongoDB ได้" });
-    }
-
     return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
-
-// /robot/all-robot
+// Admin รายการหุ่นยนต์ทั้งหมด
 router.get("/all-robot", authenticateToken, async (req, res) => {
   console.log("req.userId:", req.userId);
   console.log("req.isAdmin:", req.isAdmin);
@@ -372,7 +268,7 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
           token: robot?.token || null,
           email: robot?.email || null,
           firstName: robot?.first_name || null,
-          lastName: robot?.last_name || null, 
+          lastName: robot?.last_name || null,
           isOnline,
           last_update: status?.last_update || null,
           ...status,
@@ -388,14 +284,14 @@ router.get("/all-robot", authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
+// home page latest data
 router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) => {
   const { robot_id } = req.params;
   const user_id = req.userId;
   const isAdmin = req.isAdmin;
 
   if (isNaN(robot_id)) {
-    return res.status(400).json({ error: "robot_id ต้องเป็นตัวเลข" });
+    return res.status(400).json({ success: false, message: "robot_id ต้องเป็นตัวเลข" });
   }
 
   try {
@@ -409,13 +305,13 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
       const result = await pgClient.query(query, values);
 
       if (result.rows.length === 0) {
-        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+        return res.status(403).json({ success: false, message: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
 
       const { device_id, token } = result.rows[0];
 
       if (!device_id || !token) {
-        return res.status(400).json({ error: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
+        return res.status(400).json({ success: false, message: "ข้อมูลหุ่นยนต์ไม่สมบูรณ์" });
       }
 
       const response = await axios.get(`${API_SERVER_URL}/api/esp32-data/${device_id}`, {
@@ -435,40 +331,26 @@ router.get('/robot-data/:robot_id/latest', authenticateToken, async (req, res) =
       pgClient.release();
     }
   } catch (error) {
-    console.error("❌ Error:", error.message);
-
+    console.error("Error:", error.message);
     if (error.response?.status === 404) {
-      return res.status(404).json({ error: "ไม่พบข้อมูลเซ็นเซอร์ล่าสุด" });
+      return res.status(404).json({ success: false, message: "ไม่พบข้อมูลเซ็นเซอร์ล่าสุด" });
     }
-
-    if (error.code === 'ECONNREFUSED') {
-      return res.status(503).json({ error: "เชื่อมต่อ API ข้อมูลไม่สำเร็จ" });
-    }
-
-    return res.status(500).json({ error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+    return res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
-
-router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
-  const { device_id, startDate, endDate, groupBy = 'day' } = req.query;
+// Graph liquidType
+router.get("/usage-liquidType-Graph", authenticateToken, async (req, res) => {
+  const { device_id, startDate, endDate } = req.query;
   const userId = req.userId;
   const isAdmin = req.isAdmin;
 
   if (!device_id || !startDate || !endDate) {
-    return res.status(400).json({ error: "Missing required parameters" });
+    return res.status(400).json({ success: false, error: "Missing required parameters" });
   }
 
   function formatDate(date) {
     const d = new Date(date);
-    if (groupBy === 'month') {
-      return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
-    } else if (groupBy === 'week') {
-      const onejan = new Date(d.getFullYear(), 0, 1);
-      const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-      return `${d.getFullYear()}-W${week.toString().padStart(2,'0')}`;
-    } else {
-      return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
-    }
+    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
   }
 
   const typeMapping = {
@@ -489,7 +371,7 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
         : await pgClient.query(robotQuery, [device_id, userId]);
 
       if (robotResult.rows.length === 0) {
-        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+        return res.status(403).json({ success: false, error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
     } finally {
       pgClient.release();
@@ -505,7 +387,7 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
 
     dataLogs.forEach(log => {
       const dateKey = formatDate(log.timestamp);
-      if (!counts[dateKey]) counts[dateKey] = { water: 0, fertilizer: 0, pesticide: 0};
+      if (!counts[dateKey]) counts[dateKey] = { water: 0, fertilizer: 0, pesticide: 0 };
 
       const typeRaw = log.liquidType || 'unknown';
       const type = typeMapping[typeRaw.toLowerCase()] || 'unknown';
@@ -524,22 +406,21 @@ router.get("/spray-count-by-type", authenticateToken, async (req, res) => {
 
     res.json({ success: true, data: responseData });
   } catch (error) {
-    if (error.response?.status === 404){
-      return res.status(404).json({error : "Failed to fetch robot data"})
-
+    if (error.response?.status === 404) {
+      return res.status(404).json({ success: false, message: "Failed to fetch robot data" });
     }
     console.error("Error in PostgreSQL API:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ success: false, error: "Server error" });
   }
 });
-
-router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
+// Graph liquidType
+router.get("/usage-liquidType", authenticateToken, async (req, res) => {
   const { device_id, startDate, endDate } = req.query;
   const userId = req.userId;
   const isAdmin = req.isAdmin;
 
   if (!device_id || !startDate || !endDate) {
-    return res.status(400).json({ error: "Missing required parameters" });
+    return res.status(400).json({ success: false, message: "Missing required parameters" });
   }
 
   try {
@@ -554,33 +435,53 @@ router.get("/chemical-usage-by-type", authenticateToken, async (req, res) => {
         : await pgClient.query(robotQuery, [device_id, userId]);
 
       if (robotResult.rows.length === 0) {
-        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+        return res.status(403).json({ success: false, message: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
     } finally {
       pgClient.release();
     }
 
-    const mongoRes = await axios.get(`${API_SERVER_URL}/api/chemical-usage-by-type`, {
+    const mongoRes = await axios.get(`${API_SERVER_URL}/api/usage-history`, {
       params: { device_id, startDate, endDate }
     });
 
-    res.json(mongoRes.data);
+    const usageHistory = mongoRes.data.data?.usageHistory || [];
+
+    const typeMapping = {
+      'น้ำ': 'water',
+      'ปุ๋ย': 'fertilizer',
+      'สารเคมี': 'pesticide',
+    };
+
+    const totals = { water: 0, fertilizer: 0, pesticide: 0 };
+
+    usageHistory.forEach(log => {
+      const typeRaw = (log.liquidType || '').trim();
+      const type = typeMapping[typeRaw] || null;
+      const volume = parseFloat(log.totalVolume) || 0;
+
+      if (type && totals.hasOwnProperty(type)) {
+        totals[type] += volume;
+      }
+    });
+
+    res.json({ success: true, totals });
   } catch (error) {
-    if (error.response?.status === 404){
+    if (error.response?.status === 404) {
       return res.status(404).json({ error: "Failed to fetch robot data" });
     }
     console.error("เกิดข้อผิดพลาด :", error);
     res.status(500).json({ error: "เกิดข้อผิดพลาด" });
   }
 });
-
-router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
+// History
+router.get("/usage-history", authenticateToken, async (req, res) => {
   const { device_id, startDate, endDate } = req.query;
   const userId = req.userId;
   const isAdmin = req.isAdmin;
 
   if (!device_id || !startDate || !endDate) {
-    return res.status(400).json({ error: "Missing required parameters" });
+    return res.status(400).json({ success: false, message: "Missing required parameters" });
   }
 
   try {
@@ -595,13 +496,13 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
         : await pgClient.query(robotQuery, [device_id, userId]);
 
       if (robotResult.rows.length === 0) {
-        return res.status(403).json({ error: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
+        return res.status(403).json({ success: false, message: "คุณไม่ได้เป็นเจ้าของหุ่นยนต์ตัวนี้" });
       }
     } finally {
       pgClient.release();
     }
 
-    const HistoryData = await axios.get(`${API_SERVER_URL}/api/chemical-usage-history`, {
+    const HistoryData = await axios.get(`${API_SERVER_URL}/api/usage-history`, {
       params: { device_id, startDate, endDate }
     });
 
@@ -615,49 +516,103 @@ router.get("/chemical-usage-history", authenticateToken, async (req, res) => {
         liquidType: log.liquidType,
         chemicalName: log.chemicalName,
         area: log.area,
-        volume: log.groupedUsage || 0,
-        duration: log.groupedTime || 0,
+        volume: log.totalVolume || 0,
+        duration: log.usageTime || 0,
         other: log.other || "",
       }))
     );
 
   } catch (error) {
     if (error.response?.status === 404) {
-      return res.status(404).json({ error: "Failed to fetch robot data" });
+      return res.status(404).json({ success: false, message: "Failed to fetch robot data" });
     }
     console.error("เกิดข้อผิดพลาดในการโหลดข้อมูล", error);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในการโหลดข้อมูล" });
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในการโหลดข้อมูล" });
   }
 });
-
-router.put("/history/:id", authenticateToken, async (req, res) => {
+// History edit
+router.put("/edit-History/:id", authenticateToken, async (req, res) => {
   const historyId = req.params.id;
   const updateData = req.body;
-
 
   if (!historyId) {
     return res.status(400).json({ success: false, message: "Missing historyId" });
   }
-
-  console.log(`🔄 Updating history ID: ${historyId} with data:`, updateData);
-
   try {
     const pgClient = await db.connect();
 
     try {
-      // ส่งข้อมูลไปยัง IoT Server (MongoDB)
-      const iotResponse = await axios.put(`${API_SERVER_URL}/api/mongo-history/${historyId}`,
+      const iotResponse = await axios.put(`${API_SERVER_URL}/api/EditData-MongoDB/${historyId}`,
         updateData
       );
 
-      // สมมุติว่า IoT server ตอบกลับเป็น `{ success: true, data: ... }`
-      res.json({ success: true, iotData: iotResponse.data });
+      res.json({ success: true, message: iotResponse.data });
     } finally {
       pgClient.release();
     }
   } catch (error) {
-    console.error("Error in proxy PUT /api/history/:id:", error.message);
-    res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" });
+    console.error("เกิดข้อผิดพลาด:", error.message);
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" });
+  }
+});
+// Delete robot Admin
+router.delete("/delete-robot/:device_id", authenticateToken, async (req, res) => {
+  const { device_id } = req.params;
+  const userId = req.userId;
+  const isAdmin = req.isAdmin;
+
+  if (!device_id) {
+    return res.status(400).json({ success: false, message: "กรุณาระบุ device_id" });
+  }
+
+  try {
+    const pgClient = await db.connect();
+    let deletedRobot = null;
+
+    try {
+      const deleteQuery = isAdmin
+        ? `DELETE FROM robots WHERE device_id = $1 RETURNING *`
+        : `DELETE FROM robots WHERE device_id = $1 AND user_id = $2 RETURNING *`;
+
+      const values = isAdmin ? [device_id] : [device_id, userId];
+      const result = await pgClient.query(deleteQuery, values);
+
+      if (result.rows.length > 0) {
+        deletedRobot = result.rows[0];
+      } else {
+        console.error(`ไม่พบหุ่นยนต์ ${device_id} ในระบบหรือคุณไม่มีสิทธิ์ในการลบ`);
+      }
+
+      let mongoDeleted = false;
+
+      if (isAdmin) {
+        try {
+          const deleteMongoRes = await axios.delete(`${API_SERVER_URL}/api/deleteDataRobot/${device_id}`);
+          mongoDeleted = deleteMongoRes.data.success;
+
+          if (!mongoDeleted) {
+            console.error("ลบข้อมูลที่ IoT server ไม่สำเร็จ:", deleteMongoRes.data.message);
+          }
+        } catch (mongoErr) {
+          console.error("Error calling IoT server:", mongoErr.message);
+        }
+      }
+
+      if (!deletedRobot && !mongoDeleted) {
+        return res.status(404).json({ success: false, message: "ไม่พบหุ่นยนต์ในระบบ" });
+      }
+
+      res.json({
+        success: true,
+        message: "ลบหุ่นยนต์สำเร็จ",
+        robot: deletedRobot || { device_id }
+      });
+    } finally {
+      pgClient.release();
+    }
+  } catch (error) {
+    console.error("Error deleting robot:", error);
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
   }
 });
 

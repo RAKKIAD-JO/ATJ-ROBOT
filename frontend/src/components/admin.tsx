@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSelectedRobot } from '@/app/contexts/SelectedRobotContext';
 import { useRouter } from 'next/navigation';
 import '@/styles/admin.css';
 
 interface Robot {
-    robot_id: number; 
+    robot_id: number;
     device_id: string;
     token: string;
     status: 'online' | 'offline';
@@ -17,12 +17,12 @@ interface Robot {
 }
 
 interface User {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  profileImage: string;
-  isAdmin: boolean;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    profileImage: string;
+    isAdmin: boolean;
 }
 
 export default function AdminPage() {
@@ -35,30 +35,36 @@ export default function AdminPage() {
     const router = useRouter();
     const [modalMessage, setModalMessage] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<Robot | null>(null);
+    const [modalType, setModalType] = useState<"success" | "error">("success");
+
 
     useEffect(() => {
         fetch("/api/users/profile", {
-        method: "GET",
-        credentials: "include",
+            method: "GET",
+            credentials: "include",
         })
-        .then(async (res) => {
-            if (res.status === 403 || res.status === 401) {
-            showModal("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
-            router.replace("/");
-            return;
-            }
-            const data = await res.json();
-            setUser(data);
-        })
-        .catch((error) => {
-            showModal("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
-        });
+            .then(async (res) => {
+                if (res.status === 403 || res.status === 401) {
+                    alert("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+                    router.replace("/");
+                    return;
+                }
+                const data = await res.json();
+                setUser(data);
+            })
+            .catch((error) => {
+                alert("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
+            });
     }, [router]);
 
     const handleGenerateToken = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!deviceId.trim()) return showModal('กรุณากรอก Device ID');
+        if (!deviceId.trim()) {
+            showModal('กรุณากรอก Device ID', "error");
+            return;
+        }
 
         try {
             const res = await fetch('/iot-api/api/generate-token', {
@@ -74,15 +80,15 @@ export default function AdminPage() {
                 setDeviceId('');
                 fetchRobots();
             } else {
-                showModal(data.message || 'เกิดข้อผิดพลาด');
+                showModal(data.message || 'เกิดข้อผิดพลาด', "error");
             }
         } catch (error) {
             console.error('Error:', error);
-            showModal('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            showModal('เกิดข้อผิดพลาดในการเชื่อมต่อ', "error");
         }
     };
 
-    const fetchRobots = async () => {
+    const fetchRobots = useCallback(async () => {
         try {
             const res = await fetch('/robot/all-robot', {
                 method: 'GET',
@@ -90,7 +96,7 @@ export default function AdminPage() {
             });
 
             if (res.status === 401) {
-                showModal('คุณยังไม่เข้าสู่ระบบ หรือสิทธิ์ไม่เพียงพอ');
+                alert('คุณยังไม่เข้าสู่ระบบ หรือสิทธิ์ไม่เพียงพอ');
                 return;
             }
 
@@ -98,15 +104,15 @@ export default function AdminPage() {
             if (Array.isArray(data.robots)) {
                 setRobots(data.robots);
             }
-        } catch (err) {
-            console.error('Error fetching robots:', err);
+        } catch (error) {
+            console.error('Error fetching robots:', error);
         }
-    };
+    }, []);
 
 
     useEffect(() => {
         fetchRobots();
-    }, []);
+    }, [fetchRobots]);
 
     const filteredRobots = robots.filter((robot) => {
         const statusMatches = statusFilter === 'all' || robot.status === statusFilter;
@@ -118,32 +124,60 @@ export default function AdminPage() {
 
         return statusMatches && searchMatch;
     });
-    
+
     const handleSelectRobot = (robot: Robot) => {
         setSelectedRobot({
             robot_id: robot.robot_id,
             robot_name: robot.firstName ? `${robot.firstName} ${robot.lastName || ''}` : 'ไม่มีชื่อ',
             device_id: robot.device_id,
         });
-        
-        router.push('/home'); 
-    };
 
-    const showModal = (message: string) => {
-        setModalMessage(message);
+        router.push('/home');
     };
-
-    const closeModal = () => {
-        setModalMessage(null);
-    };
-
     useEffect(() => {
         if (user && user.isAdmin === false) {
             router.replace("/home");
         }
     }, [user, router]);
 
-    
+    const handleDeleteRobot = (robot: Robot) => {
+        setDeleteConfirm(robot);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirm) return;
+
+        try {
+            const res = await fetch(`/robot/delete-robot/${deleteConfirm.device_id}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showModal("ลบหุ่นยนต์สำเร็จ");
+                setRobots((prev) => prev.filter((r) => r.device_id !== deleteConfirm.device_id));
+            } else {
+                showModal(data.message || "เกิดข้อผิดพลาดในการลบ");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            showModal("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+        } finally {
+            setDeleteConfirm(null);
+        }
+    };
+
+    const showModal = (message: string, type: "success" | "error" = "success") => {
+        setModalMessage(message);
+        setModalType(type);
+    };
+
+    const closeModal = () => {
+        setModalMessage(null);
+        window.location.reload();
+    };
+
     return (
         <div className="admin-container">
             <h1>จัดการ Token และหุ่นยนต์</h1>
@@ -203,12 +237,21 @@ export default function AdminPage() {
                 ) : (
                     filteredRobots.map((robot) => (
                         <div className={`robot-card ${robot.status}`} key={robot.device_id}>
+                            <button
+                                className="delete-icon"
+                                onClick={() => handleDeleteRobot(robot)}
+                                title="ลบหุ่นยนต์"
+                            >×</button>
                             <h3>{robot.device_id}</h3>
-                            <p><strong>ชื่อ:</strong> {robot.firstName ? `${robot.firstName} ${robot.lastName || ''}` : 'ไม่มีเจ้าข้อง'}</p>
-                            <p><strong>อีเมล:</strong> {robot.email || 'ไม่มีเจ้าข้อง'}</p>
-                            <p><strong>เบอร์โทร:</strong> {robot.phone || 'ไม่มีเจ้าข้อง'}</p>
-                            <p><strong>สถานะ:</strong> {robot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}</p>
+                            <p>
+                                <strong>ชื่อ:</strong>{" "}
+                                {robot.firstName ? `${robot.firstName} ${robot.lastName || ""}` : "ไม่มีเจ้าข้อง"}
+                            </p>
+                            <p><strong>อีเมล:</strong> {robot.email || "ไม่มีเจ้าข้อง"}</p>
+                            <p><strong>เบอร์โทร:</strong> {robot.phone || "ไม่มีเจ้าข้อง"}</p>
+                            <p><strong>สถานะ:</strong> {robot.status === "online" ? "ออนไลน์" : "ออฟไลน์"}</p>
                             <p><strong>Token:</strong> {robot.token}</p>
+
                             <button onClick={() => handleSelectRobot(robot)}>ดูการทำงาน</button>
                         </div>
                     ))
@@ -218,15 +261,38 @@ export default function AdminPage() {
                 <div className="modal-overlay">
                     <div className="modal-box">
                         <button className="modal-close" onClick={closeModal}>×</button>
-                        <div className="crossmark-animation">
-                            <svg viewBox="0 0 52 52" className="crossmark">
-                                <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
-                                <path className="crossmark-line1" d="M16 16 L36 36" />
-                                <path className="crossmark-line2" d="M36 16 L16 36" />
-                            </svg>
-                        </div>
+                        {modalType === "success" ? (
+                            <div className="checkmark-animation">
+                                <svg viewBox="0 0 52 52" className="checkmark">
+                                    <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
+                                    <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
+                                </svg>
+                            </div>
+                        ) : (
+                            <div className="crossmark-animation">
+                                <svg viewBox="0 0 52 52" className="crossmark">
+                                    <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
+                                    <path className="crossmark-line1" d="M16 16 L36 36" />
+                                    <path className="crossmark-line2" d="M36 16 L16 36" />
+                                </svg>
+                            </div>
+                        )}
                         <p>{modalMessage}</p>
                         <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+                    </div>
+                </div>
+            )}
+            {deleteConfirm && (
+                <div className="modal-overlay">
+                    <div className="modal-box">
+                        <button className="modal-close" onClick={() => setDeleteConfirm(null)}>×</button>
+                        <div className="crossmark-animation">
+                            <p>คุณแน่ใจหรือไม่ว่าต้องการลบหุ่นยนต์ <strong>{deleteConfirm.device_id}</strong> ?</p>
+                            <div className="modal-actions">
+                                <button className="modal-ok" onClick={confirmDelete}>ยืนยัน</button>
+                                <button className="modal-cancel" onClick={() => setDeleteConfirm(null)}>ยกเลิก</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

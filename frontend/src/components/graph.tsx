@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import { LineChart, BarChart } from "@mui/x-charts";
 import { PieChart } from "@mui/x-charts/PieChart";
 import "@/styles/graph.css";
@@ -46,29 +46,29 @@ export default function Graph() {
   const [modalMessage, setModalMessage] = useState<string | null>(null);
 
   useEffect(() => {
-        fetch("/api/users/profile", {
-          method: "GET",
-          credentials: "include", 
-        })
-        .then(async (res) => {
-            if (res.status === 403 || res.status === 401) {
-                setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
-                router.replace("/");
-                return;
-            }
-            const data = await res.json();
-            setUser(data);
-        })
-        .catch((error) => {
-            setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
-        });
-    }, [router]);
+    fetch("/api/users/profile", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then(async (res) => {
+        if (res.status === 403 || res.status === 401) {
+          setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+          router.replace("/");
+          return;
+        }
+        const data = await res.json();
+        setUser(data);
+      })
+      .catch((error) => {
+        setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
+      });
+  }, [router]);
 
   async function fetchSprayCounts() {
     if (!selectedRobot || !startDate || !endDate) return;
     setLoading(true);
     try {
-      const res = await fetch(`/robot/spray-count-by-type?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}&groupBy=day`,
+      const res = await fetch(`/robot/usage-liquidType-Graph?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}&groupBy=day`,
         {
           method: 'GET',
           credentials: 'include',
@@ -79,7 +79,6 @@ export default function Graph() {
       const text = await res.text();
 
       if (!res.ok || !contentType?.includes("application/json")) {
-        console.error("Invalid response:", text);
         setSprayCounts([]);
         throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
       }
@@ -91,7 +90,6 @@ export default function Graph() {
       if (error instanceof Error) {
         setErrorMessage(error.message);
       }
-      console.error("Failed to fetch spray counts:", error);
       setSprayCounts([]);
     } finally {
       setLoading(false);
@@ -101,7 +99,7 @@ export default function Graph() {
   async function fetchUsageByType() {
     if (!selectedRobot || !startDate || !endDate) return;
     try {
-      const res = await fetch(`/robot/chemical-usage-by-type?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}`,
+      const res = await fetch(`/robot/usage-liquidType?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}`,
         {
           method: 'GET',
           credentials: 'include',
@@ -112,24 +110,25 @@ export default function Graph() {
       const text = await res.text();
 
       if (!res.ok || !contentType?.includes("application/json")) {
-        console.error("Invalid response:", text);
         setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
         throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
       }
 
       const data = JSON.parse(text);
-      if (data.success) setUsageByType(data.data);
-      else setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
+      if (data.success) {
+        setUsageByType(data.totals);
+      } else {
+        setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
+      }
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
       }
-      console.error("Failed to fetch usage by type:", error);
       setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
     }
-    
+
   }
-  
+
   const showModal = (message: string) => {
     setModalMessage(message);
   };
@@ -174,15 +173,15 @@ export default function Graph() {
         <div className="graph-header">
           <h2 className="graph-title">ภาพรวมการใช้สารเคมี</h2>
         </div>
-          {!selectedRobot ? (
-            <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
-          ) : (
-            <>
+        {!selectedRobot ? (
+          <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
+        ) : (
+          <>
             <div className="selected-robot-info">
               <p>
                 หุ่นยนต์ที่เลือก:{" "}
-                {user?.isAdmin 
-                  ? selectedRobot.device_id 
+                {user?.isAdmin
+                  ? selectedRobot.device_id
                   : selectedRobot.robot_name}
               </p>
             </div>
@@ -268,25 +267,25 @@ export default function Graph() {
                 </div>
               </section>
             </div>
-            </>
-            )}
-      </section>
-        {modalMessage && (
-          <div className="modal-overlay">
-            <div className="modal-box">
-              <button className="modal-close" onClick={closeModal}>×</button>
-              <div className="crossmark-animation">
-                <svg viewBox="0 0 52 52" className="crossmark">
-                  <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
-                  <path className="crossmark-line1" d="M16 16 L36 36" />
-                  <path className="crossmark-line2" d="M36 16 L16 36" />
-                </svg>
-              </div>
-              <p>{modalMessage}</p>
-              <button className="modal-ok" onClick={closeModal}>ตกลง</button>
-            </div>
-          </div>
+          </>
         )}
+      </section>
+      {modalMessage && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <button className="modal-close" onClick={closeModal}>×</button>
+            <div className="crossmark-animation">
+              <svg viewBox="0 0 52 52" className="crossmark">
+                <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
+                <path className="crossmark-line1" d="M16 16 L36 36" />
+                <path className="crossmark-line2" d="M36 16 L16 36" />
+              </svg>
+            </div>
+            <p>{modalMessage}</p>
+            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

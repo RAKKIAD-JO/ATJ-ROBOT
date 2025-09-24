@@ -1,23 +1,25 @@
+const { Resend } = require('resend');
 const express = require("express");
 const router = express.Router();
 const pool = require("./postgres");
 const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
-const jwt = require("jsonwebtoken"); 
+//const nodemailer = require("nodemailer");
+const jwt = require("jsonwebtoken");
 const authenticateToken = require('./middleware/auth');
 const multer = require('multer');
 const path = require('path');
-//const axios = require("axios");
 const fs = require('fs');
 const util = require('util');
 const unlinkAsync = util.promisify(fs.unlink);
 const crypto = require('crypto');
+const resendreg = new Resend(process.env.RESEND_API_KEY);
+const resendOTP = new Resend(process.env.RESEND_API_KEY_OTP);
 
 
 // ตั้งค่า storage สำหรับ multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, 'uploads/profile_Image')); 
+    cb(null, path.join(__dirname, 'uploads/profile_Image'));
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname);
@@ -30,13 +32,18 @@ const upload = multer({ storage });
 // REGISTER USER
 router.post("/register", async (req, res) => {
   const { firstName, lastName, passWord, phoneNumber, email } = req.body;
+
+  if (!firstName || !lastName || !passWord || !phoneNumber || !email) {
+    return res.status(400).json({ success: false, message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
+  }
+
   try {
     const checkEmail = await pool.query(
       `SELECT * FROM users WHERE email = $1`,
       [email]
     );
-    if (checkEmail.rows.length > 0) {
-      return res.status(400).json({ message: "Email นี้มีผู้ใช้แล้ว" });
+    if (checkEmail.rows.length === 1) {
+      return res.status(400).json({ success: false, message: "Email นี้มีผู้ใช้แล้ว" });
     }
 
     const hashedPassword = await bcrypt.hash(passWord, 10);
@@ -45,24 +52,15 @@ router.post("/register", async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, false) RETURNING *`,
       [firstName, lastName, phoneNumber, email, hashedPassword]
     );
-    const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 10 * 60000);
 
+    const token = crypto.randomBytes(32).toString("hex");
     await pool.query(
-      `INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)`,
-      [email, token, expiresAt]
+      `INSERT INTO email_verifications (email, token) VALUES ($1, $2)`,
+      [email, token]
     );
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"ATJRobot" <${process.env.EMAIL_USER}>`,
+    await resendreg.emails.send({
+      from: `${process.env.RESEND_FROM_NAME} <${process.env.RESEND_FROM_EMAIL}>`,
       to: email,
       subject: "ยืนยันอีเมลของคุณ",
       html: `
@@ -83,7 +81,6 @@ router.post("/register", async (req, res) => {
             </a>
           </div>
           <p style="margin-top: 30px; font-size: 14px; color: #888888; text-align: center;">
-            * ลิงก์จะหมดอายุใน 10 นาที<br>
             หากคุณไม่ได้ทำการสมัคร กรุณาละเว้นอีเมลนี้
           </p>
         </div>
@@ -92,7 +89,8 @@ router.post("/register", async (req, res) => {
     });
 
     res.status(201).json({
-      message: "ลงทะเบียนสำเร็จ กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ",
+      success: true,
+      message: "ลงทะเบียนสำเร็จ กรุณายืนยันอีเมลของคุณ",
       user: {
         id: result.rows[0].user_id,
         firstName: result.rows[0].first_name,
@@ -104,11 +102,11 @@ router.post("/register", async (req, res) => {
     });
   } catch (error) {
     console.error("Error registering user:", error);
-    res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาด" });
   }
 });
 
-// ✅ LOGIN USER
+// login
 router.post("/login", async (req, res) => {
   const { email, passWord } = req.body;
   try {
@@ -118,30 +116,26 @@ router.post("/login", async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(400).json({ message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
+      return res.status(400).json({ success: false, message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
     }
 
     const user = userResult.rows[0];
     if (!user.is_verified) {
-      return res.status(403).json({ message: "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" });
+      return res.status(403).json({ success: false, message: "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ" });
     }
     const isMatch = await bcrypt.compare(passWord, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
+      return res.status(400).json({ success: false, message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
     }
 
     const token = jwt.sign(
-      { userId: user.user_id,
+      {
+        userId: user.user_id,
         isAdmin: user.is_admin || false,
       },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
-    );
-
-    await pool.query(
-      `INSERT INTO login_history (user_id, is_admin) VALUES ($1, $2)`,
-      [user.user_id, user.is_admin || false]
     );
 
     res.cookie('token', token, {
@@ -160,7 +154,7 @@ router.post("/login", async (req, res) => {
         email: user.email,
         phone: user.phone,
         isAdmin: user.is_admin || false,
-        
+
       },
     });
   } catch (error) {
@@ -168,8 +162,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "เกิดข้อผิดพลาดในการเข้าสู่ระบบ", error: error.message });
   }
 });
-
-// ✅ FORGOT PASSWORD - ส่ง OTP
+// ส่ง OTP
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
   try {
@@ -177,27 +170,19 @@ router.post("/forgot-password", async (req, res) => {
       email,
     ]);
     if (user.rows.length === 0) {
-      return res.status(400).json({ message: "ไม่พบอีเมลนี้ในระบบ" });
+      return res.status(400).json({ success: false, message: "ไม่พบอีเมลนี้ในระบบ" });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 3 * 60000);
+    const expiresAt = new Date(Date.now() + 10 * 60000);
 
     await pool.query(
       `INSERT INTO otp_requests (email, otp_code, expires_at) VALUES ($1, $2, $3)`,
       [email, otp, expiresAt]
     );
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"ATJRobot" <${process.env.EMAIL_USER}>`,
+    await resendOTP.emails.send({
+      from: `${process.env.RESEND_FROM_NAME} <${process.env.RESEND_FROM_EMAIL}>`,
       to: email,
       subject: "OTP สำหรับรีเซ็ตรหัสผ่าน",
       html: `
@@ -208,7 +193,7 @@ router.post("/forgot-password", async (req, res) => {
             <div style="text-align: center; font-size: 36px; font-weight: bold; color: #1a73e8; letter-spacing: 4px; background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
               ${otp}
             </div>
-            <p style="font-size: 14px; color: #555;">รหัสนี้จะหมดอายุใน <strong>1 นาที</strong> นับจากเวลาที่ส่ง</p>
+            <p style="font-size: 14px; color: #555;">รหัสนี้จะหมดอายุใน <strong>10 นาที</strong> นับจากเวลาที่ส่ง</p>
             <p style="font-size: 14px; color: #888;">หากคุณไม่ได้ร้องขอรีเซ็ตรหัสผ่าน กรุณาเพิกเฉยต่ออีเมลฉบับนี้</p>
             <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
             <p style="font-size: 12px; color: #aaa; text-align: center;">ระบบจัดการสมาชิก • ${new Date().getFullYear()}</p>
@@ -217,14 +202,13 @@ router.post("/forgot-password", async (req, res) => {
       `,
     });
 
-    res.status(200).json({ message: "ส่ง OTP สำเร็จ" });
+    res.status(200).json({ success: true, message: "ส่ง OTP สำเร็จ" });
   } catch (error) {
     console.error("Error sending OTP:", error);
-    res.status(500).json({ message: "เกิดข้อผิดพลาดในการส่ง OTP" });
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในการส่ง OTP" });
   }
 });
-
-// ✅ VERIFY OTP
+// Click OTP
 router.post("/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -234,32 +218,31 @@ router.post("/verify-otp", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ message: "OTP ไม่ถูกต้องหรือหมดอายุ" });
+      return res.status(400).json({ success: false, message: "OTP ไม่ถูกต้องหรือหมดอายุ" });
     }
 
     await pool.query(`UPDATE otp_requests SET verified = true WHERE otp_id = $1`, [
       result.rows[0].otp_id,
     ]);
 
-    res.status(200).json({ message: "OTP ถูกต้อง สามารถเปลี่ยนรหัสผ่านได้" });
+    res.status(200).json({ success: true, message: "OTP ถูกต้อง สามารถเปลี่ยนรหัสผ่านได้" });
   } catch (error) {
     console.error("Error verifying OTP:", error);
-    res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบ OTP" });
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในการตรวจสอบ OTP" });
   }
 });
-
-// ✅ RESET PASSWORD
+// reset Password
 router.post("/reset-password", async (req, res) => {
   const { email, newPassword } = req.body;
   try {
-    const otpVerified = await pool.query(
+    const otpResetPassword = await pool.query(
       `SELECT * FROM otp_requests WHERE email = $1 AND verified = true 
        ORDER BY expires_at DESC LIMIT 1`,
       [email]
     );
 
-    if (otpVerified.rows.length === 0) {
-      return res.status(400).json({ message: "ยังไม่ได้ยืนยัน OTP หรือหมดอายุแล้ว" });
+    if (otpResetPassword.rows.length === 0) {
+      return res.status(400).json({ success: false, message: "ยังไม่ได้ยืนยัน OTP หรือหมดอายุแล้ว" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -270,24 +253,22 @@ router.post("/reset-password", async (req, res) => {
 
     await pool.query(`DELETE FROM otp_requests WHERE email = $1`, [email]);
 
-    res.status(200).json({ message: "รีเซ็ตรหัสผ่านสำเร็จ" });
+    res.status(200).json({ success: true, message: "รีเซ็ตรหัสผ่านสำเร็จ" });
   } catch (error) {
     console.error("Error resetting password:", error);
-    res.status(500).json({ message: "เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน" });
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน" });
   }
 });
-
-// ✅ GET PROFILE
+// profile
 router.get("/profile", authenticateToken, async (req, res) => {
   const userId = req.userId;
-  console.log("GET /profile - userId:", userId); 
   try {
     const result = await pool.query(
       `SELECT user_id, first_name, last_name, phone, email, profile_image ,is_admin FROM users WHERE user_id = $1`,
       [userId]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+      return res.status(404).json({ success: false, message: "ไม่พบผู้ใช้" });
     }
     const user = result.rows[0];
     res.json({
@@ -300,11 +281,10 @@ router.get("/profile", authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error("GET PROFILE ERROR:", error);
-    res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาด" });
   }
 });
-
-// ✅ PUT PROFILE (รับไฟล์)
+// editProfile
 router.put("/profile", authenticateToken, upload.single('profileImage'), async (req, res) => {
   const userId = req.userId;
   const { fullName, phone, newPassword } = req.body;
@@ -368,11 +348,11 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
 
     res.json({ message: "อัปเดตข้อมูลสำเร็จ" });
   } catch (error) {
-    res.status(500).json({ message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล" });
+    console.error("EDIT PROFILE ERROR:", error);
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล" });
   }
 });
-
-// ✅ GET TOKEN EMAIL
+// ยืนยัน email
 router.get("/verify-email", async (req, res) => {
   const { email, token } = req.query;
 
@@ -408,18 +388,6 @@ router.get("/verify-email", async (req, res) => {
       `);
     }
 
-    if (new Date() > new Date(record.expires_at)) {
-      return res.send(`
-        <div style="font-family: 'Kanit', sans-serif; padding: 40px;">
-          <div style="max-width: 600px; background: #ffffff; padding: 30px; margin: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center;">
-            <img src="https://img.icons8.com/color/96/hourglass--v1.png" alt="Expired Icon" style="width: 60px; margin-bottom: 20px;" />
-            <h2 style="color: #d35400; margin-bottom: 10px;">ลิงก์หมดอายุ</h2>
-            <p style="color: #555555; font-size: 16px;">กรุณาลงทะเบียนใหม่ หรือขอการยืนยันอีกครั้ง</p>
-          </div>
-        </div>
-      `);
-    }
-
     await pool.query(`UPDATE users SET is_verified = true WHERE email = $1`, [
       email,
     ]);
@@ -439,20 +407,16 @@ router.get("/verify-email", async (req, res) => {
     `);
   } catch (error) {
     console.error(error);
-    res.status(500).send(`
-      <h2>เกิดข้อผิดพลาด</h2>
-      <p>กรุณาลองใหม่ภายหลัง</p>
-    `);
+    res.status(500).send(`<h2>เกิดข้อผิดพลาด</h2><p>กรุณาลองใหม่ภายหลัง</p>`);
+    res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
   }
 });
 
-// ✅ LOGOUT USER
+// logout
 router.post("/logout", (req, res) => {
   res.clearCookie('token');
   res.json({ message: "ออกจากระบบสำเร็จ" });
 });
 
-// ให้ express เสิร์ฟไฟล์ static จาก /uploads
 router.use('/uploads/profile_Image', express.static(path.join(__dirname, 'uploads/profile_Image')));
-
 module.exports = router;

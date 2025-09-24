@@ -772,3 +772,8 @@ aside .sidebar a .tooltip {
   }
 
 }
+
+.scrollable-robot-list {
+  max-height: 205px; 
+  overflow-y: auto;
+}

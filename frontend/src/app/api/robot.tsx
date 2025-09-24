@@ -1,10 +1,11 @@
 
 export type SensorDataType = {
   battery: number;
-  sprayRate: number;
+  flowRate: number;
   waterLevel: number;
   deviceStatus: "online" | "offline";
   pumpStatus: "ON" | "OFF";
+  totalVolume: number;
 };
 
 export type RawSensorData = {
@@ -12,6 +13,7 @@ export type RawSensorData = {
   sprayRate: number;
   waterLevel: number;
   timestamp: string;
+  totalVolume: number;
 };
 
 export type Esp32DataType = {

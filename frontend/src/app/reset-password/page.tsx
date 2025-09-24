@@ -1,8 +1,8 @@
-import ResetPassword from '@/components/resetPassword'
-export default function page() {
-  return (
+// src/app/reset-password/page.tsx
+"use client";
 
-    <ResetPassword></ResetPassword>
+import OtpPage from "@/components/otp";
 
-  )
+export default function ResetPasswordPage() {
+  return <OtpPage />;
 }
