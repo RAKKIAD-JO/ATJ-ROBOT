@@ -56,15 +56,21 @@ export default function HistoryPage() {
     const [modalType, setModalType] = useState<"success" | "error">("success");
 
     const isValidDate = (d: Date) => d instanceof Date && !isNaN(d.getTime());
-    // ฟังก์ตรวรสอบวัน
+
+    // แปลงเป็น key ของวัน (UTC)
+    const toUTCDateKey = (date: Date): string => {
+        if (!isValidDate(date)) return "";
+        return date.toISOString().split('T')[0];
+    };
+
+    // ฟังก์ชันกรองวันที่
     const filterByDate = (rowDate: string, startDate: string, endDate: string): boolean => {
         const row = new Date(rowDate);
         const start = new Date(startDate);
         const end = new Date(endDate);
 
-        if (!isValidDate(row) || !isValidDate(start) || !isValidDate(end)) {
-            return false;
-        }
+        if (!isValidDate(row)) return false;
+        if (!startDate || !endDate) return true; // ถ้ายังไม่เลือกช่วงวันที่ ให้ผ่านทั้งหมด
 
         const rowKey = toUTCDateKey(row);
         const startKey = toUTCDateKey(start);
@@ -73,9 +79,73 @@ export default function HistoryPage() {
         return rowKey >= startKey && rowKey <= endKey;
     };
 
-
     useEffect(() => {
-        // ดึงข้อมูลผู้ใช้
+        const now = new Date();
+        now.setHours(now.getHours() + 7);
+
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+
+        const start = new Date(now);
+        start.setDate(start.getDate() - 7);
+        const startY = start.getFullYear();
+        const startM = String(start.getMonth() + 1).padStart(2, "0");
+        const startD = String(start.getDate()).padStart(2, "0");
+        const startStr = `${startY}-${startM}-${startD}`;
+
+        setStartDate(startStr);
+        setEndDate(todayStr);
+    }, [selectedRobot]);
+
+    // ฟังก์ชันโหลดข้อมูล
+    const reloadData = async () => {
+        if (!selectedRobot) return;
+        setLoading(true);
+
+        try {
+            if (!selectedRobot || !startDate || !endDate) return;
+            const startStr = startDate;
+            const endStr = endDate;
+            const res = await fetch(
+                `/robot/usage-history?device_id=${selectedRobot.device_id}&startDate=${startStr}&endDate=${endStr}`,
+                {
+                    method: "GET",
+                    credentials: "include",
+                }
+            );
+
+            if (!res.ok) {
+                throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
+            }
+
+            const json = await res.json();
+
+            if (json.length === 0) {
+                setData([]);
+                setErrorMessage("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
+                return;
+            }
+
+            setData(json);
+            setCurrentPage(1);
+            setErrorMessage("");
+        } catch (error) {
+            console.error("โหลดข้อมูลล้มเหลว:", error);
+            setErrorMessage(
+                error instanceof Error
+                    ? error.message
+                    : "เกิดข้อผิดพลาดในการโหลดข้อมูล"
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // โหลดข้อมูลเมื่อเข้า หรือเมื่อเปลี่ยน robot / วันที่
+    useEffect(() => {
+        // โหลดข้อมูลผู้ใช้
         fetch("/api/users/profile", {
             method: "GET",
             credentials: "include",
@@ -92,70 +162,13 @@ export default function HistoryPage() {
             .catch((error) => {
                 setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
             });
+        reloadData();
+    }, [router]);
 
-        // ตรวจสอบว่ามี selectedRobot และวันที่ครบหรือไม่
-        if (!selectedRobot || !startDate || !endDate) return;
-        setLoading(true);
-
-        const fetchData = async () => {
-            try {
-                if (!selectedRobot || !startDate || !endDate) return;
-                const startStr = startDate;
-                const endStr = endDate;
-                const res = await fetch(
-                    `/robot/usage-history?device_id=${selectedRobot.device_id}&startDate=${startStr}&endDate=${endStr}`,
-                    {
-                        method: "GET",
-                        credentials: "include",
-                    }
-                );
-
-                if (!res.ok) {
-                    throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
-                }
-
-                const json = await res.json();
-
-                if (json.length === 0) {
-                    setData([]);
-                    setErrorMessage("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
-                    return;
-                }
-
-                setData(json);
-                setCurrentPage(1);
-                setErrorMessage("");
-            } catch (error) {
-                console.error("โหลดข้อมูลล้มเหลว:", error);
-                setErrorMessage(
-                    error instanceof Error
-                        ? error.message
-                        : "เกิดข้อผิดพลาดในการโหลดข้อมูล"
-                );
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [router, selectedRobot, startDate, endDate]);
-
-    const toUTCDateKey = (date: Date): string => {
-        if (!isValidDate(date)) return "";
-        return date.toISOString().split('T')[0];
-    };
-
-    // กรองข้อมูลตาม liquidType และช่วงวันที่
-    const filteredData = data.filter((row) => {
-        const matchType = filter === "ทั้งหมด" || row.liquidType === filter;
-        const matchDate = filterByDate(row.date, startDate, endDate);
-        return matchType && matchDate;
-    });
-
-    const paginatedData = filteredData.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    useEffect(() => {
+        reloadData();
+        if (!selectedRobot) return;
+    }, [selectedRobot, startDate, endDate]);
 
     // ฟังก์ชันบันทึกข้อมูลแก้ไข
     const handleSave = async () => {
@@ -182,22 +195,13 @@ export default function HistoryPage() {
 
             if (!response.ok) {
                 throw new Error("บันทึกข้อมูลล้มเหลว");
-            } else if (response.ok) {
-                showModal("บันทึกข้อมูลเรียบร้อย", "success");
             }
 
-            const result = await response.json();
-            const updatedItem = result.message?.data;
+            showModal("บันทึกข้อมูลเรียบร้อย", "success");
 
-            if (!updatedItem || !updatedItem._id) {
-                throw new Error("ข้อมูลอัปเดตไม่ถูกต้อง");
-            }
+            // 🔄 โหลดข้อมูลใหม่
+            await reloadData();
 
-            const updatedData = data.map((item) =>
-                item._id === updatedItem._id ? updatedItem : item
-            );
-
-            setData(updatedData);
             setEditItem(null);
         } catch (error) {
             console.error("เกิดข้อผิดพลาดในการอัปเดต:", error);
@@ -249,8 +253,6 @@ export default function HistoryPage() {
 
     const closeModal = () => {
         setModalMessage(null);
-        setStartDate("");
-        setEndDate("");
     };
 
     useEffect(() => {
@@ -260,6 +262,18 @@ export default function HistoryPage() {
             setModalMessage(null);
         }
     }, [errorMessage]);
+
+    // กรองข้อมูล
+    const filteredData = data.filter((row) => {
+        const matchType = filter === "ทั้งหมด" || row.liquidType === filter;
+        const matchDate = filterByDate(row.date, startDate, endDate);
+        return matchType && matchDate;
+    });
+
+    const paginatedData = filteredData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     if (loading) {
         return <Loading />;
@@ -400,7 +414,6 @@ export default function HistoryPage() {
                                     fullWidth
                                     margin="dense"
                                 >
-                                    <MenuItem value="EDIT_ME">เลือกประเภทของเหลว</MenuItem>
                                     <MenuItem value="น้ำ">น้ำ</MenuItem>
                                     <MenuItem value="สารเคมี">สารเคมี</MenuItem>
                                     <MenuItem value="ปุ๋ย">ปุ๋ย</MenuItem>

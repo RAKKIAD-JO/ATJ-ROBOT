@@ -80,6 +80,11 @@ export default function OtpPage() {
   const handlerResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (newPassword.length < 8) {
+      showModal("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร", 'error');
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       showModal("รหัสผ่านไม่ตรงกัน", 'error');
       return;

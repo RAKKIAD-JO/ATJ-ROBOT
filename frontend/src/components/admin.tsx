@@ -233,7 +233,7 @@ export default function AdminPage() {
             </div>
             <div className="robot-grid">
                 {filteredRobots.length === 0 ? (
-                    <p>ไม่พบหุ่นยนต์ที่ตรงกับเงื่อนไข</p>
+                    <p>ไม่พบหุ่นยนต์ที่กำลังออนไลน์</p>
                 ) : (
                     filteredRobots.map((robot) => (
                         <div className={`robot-card ${robot.status}`} key={robot.device_id}>
@@ -249,7 +249,9 @@ export default function AdminPage() {
                             </p>
                             <p><strong>อีเมล:</strong> {robot.email || "ไม่มีเจ้าข้อง"}</p>
                             <p><strong>เบอร์โทร:</strong> {robot.phone || "ไม่มีเจ้าข้อง"}</p>
-                            <p><strong>สถานะ:</strong> {robot.status === "online" ? "ออนไลน์" : "ออฟไลน์"}</p>
+                            <p className={robot.status === "online" ? "status online" : "status offline"}>
+                                <strong>สถานะ:</strong> {robot.status === "online" ? "ออนไลน์" : "ออฟไลน์"}
+                            </p>
                             <p><strong>Token:</strong> {robot.token}</p>
 
                             <button onClick={() => handleSelectRobot(robot)}>ดูการทำงาน</button>

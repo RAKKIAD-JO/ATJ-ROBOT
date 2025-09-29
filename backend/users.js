@@ -3,7 +3,6 @@ const express = require("express");
 const router = express.Router();
 const pool = require("./postgres");
 const bcrypt = require("bcrypt");
-//const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const authenticateToken = require('./middleware/auth');
 const multer = require('multer');

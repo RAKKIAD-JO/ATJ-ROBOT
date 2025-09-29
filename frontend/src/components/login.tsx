@@ -55,6 +55,11 @@ export default function Home() {
       showModal("รหัสผ่านไม่ตรงกัน", "error");
       return;
     }
+
+    if (step === "register" && formData.phoneNumber.length !== 10) {
+      showModal("หมายเลขโทรศัพท์ต้องมี 10 หลัก", "error");
+      return;
+    }
     
     if (step === "register") {
       try {

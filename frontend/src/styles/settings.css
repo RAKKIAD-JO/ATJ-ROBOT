@@ -39,8 +39,9 @@
     box-shadow: none;
   }
   
-  /* ด้านซ้าย: รูปโปรไฟล์ */
+ 
   .left-section {
+    word-break: break-word;
     text-align: center;
     width: 200px;
   }
@@ -213,7 +214,7 @@
   border-radius: 10px;
   border-radius: 2.8rem;
   width: 350px;
-  height: 200px;
+  height: auto;
   text-align: center;
   position: relative;
   animation: fadeIn 0.3s ease;
