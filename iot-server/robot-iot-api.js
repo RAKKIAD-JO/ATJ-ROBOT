@@ -8,7 +8,6 @@ const authenticateDevice = require('./middleware/authenticateDevice');
 const express = require("express");
 const router = express.Router();
 const moment = require('moment-timezone');
-//const { error } = require('console');
 
 mongoose.connect(mongoUrl, {
   useNewUrlParser: true,
@@ -119,7 +118,7 @@ router.post('/esp32-data', authenticateDevice, async (req, res) => {
       formID,
       device_id,
       plantType,
-      liquidType: normalizeLiquidType(liquidType),
+      liquidType,
       chemicalName,
       area,
       other: other || "",

@@ -181,7 +181,7 @@ export default function Sidebar() {
                     <Link href="/settings" className={pathname === "/settings" ? "active" : ""}>
                         <span className="material-symbols-outlined">settings</span>
                         <div className="tooltip">ตั้งค่า</div>
-                        <h3>ตั้งค่า</h3>
+                        <h3>ตั้งค่าโปรไฟล์</h3>
                     </Link>
 
                     {!user?.isAdmin && (

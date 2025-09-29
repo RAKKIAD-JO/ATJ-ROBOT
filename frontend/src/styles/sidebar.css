@@ -311,12 +311,13 @@ aside .sidebar a .tooltip {
 }
 
 .sidebar .sidebar-footer {
+  word-break: break-word;
   display: flex;
   flex-direction: column;
   align-items: start;
   justify-content: center;
   gap: 1rem;
-  width: 100%;
+  width: 75%;
   margin-left: 10px;
   position: absolute;
   bottom: 4rem;
@@ -774,6 +775,6 @@ aside .sidebar a .tooltip {
 }
 
 .scrollable-robot-list {
-  max-height: 205px; 
+  max-height: 205px;
   overflow-y: auto;
 }

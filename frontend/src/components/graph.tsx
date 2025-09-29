@@ -140,6 +140,26 @@ export default function Graph() {
   };
 
   useEffect(() => {
+    const now = new Date();
+    now.setHours(now.getHours() + 7);
+
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    const start = new Date(now);
+    start.setDate(start.getDate() - 7);
+    const startY = start.getFullYear();
+    const startM = String(start.getMonth() + 1).padStart(2, "0");
+    const startD = String(start.getDate()).padStart(2, "0");
+    const startStr = `${startY}-${startM}-${startD}`;
+
+    setStartDate(startStr);
+    setEndDate(todayStr);
+  }, [selectedRobot]);
+
+  useEffect(() => {
     fetchSprayCounts();
     fetchUsageByType();
   }, [selectedRobot, startDate, endDate]);

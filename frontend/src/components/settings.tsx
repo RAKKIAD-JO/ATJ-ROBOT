@@ -93,6 +93,11 @@ export default function SettingsPage() {
   };
 
   const handleSaveChanges = async () => {
+    if (newPassword && newPassword.length < 8) {
+      setErrorMessage('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+      return;
+    }
+
     if (newPassword && newPassword !== confirmPassword) {
       setErrorMessage('รหัสผ่านใหม่และรหัสผ่านยืนยันไม่ตรงกัน');
       return;
@@ -105,6 +110,7 @@ export default function SettingsPage() {
 
     try {
       const formData = new FormData();
+
 
       if (fullName.trim() !== profileFullName.trim() && fullName.trim() !== "") {
         formData.append('fullName', fullName.trim());

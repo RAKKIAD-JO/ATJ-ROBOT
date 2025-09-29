@@ -3,7 +3,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const iot_api = require('./robot-iot-api');
 const {checkAndUpdateStatuses,checkingDataandDelete}  = require('./statusChecker');
-//const { set } = require('mongoose');
 const app = express();
 const port = 3000;
 
