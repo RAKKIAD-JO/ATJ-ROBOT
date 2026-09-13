@@ -1114,68 +1114,213 @@ button:focus-visible,
   margin-top: 20px;
 }
 
+/* ==========================================================================
+   RESPONSIVE DESIGN SYSTEM
+   Breakpoints: Desktop ≥1200px | Tablet 768–1199px | Mobile <768px (down to 375px)
+   ========================================================================== */
+
+/* Prevent Unintended Horizontal Page Overflow */
+html,
+body,
+.app,
+.main {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
 .backdrop {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 9, 0.55);
-  z-index: 35;
+  background: rgba(4, 6, 9, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 45;
 }
 
-@media (max-width: 1180px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .grid-2col {
-    grid-template-columns: 1fr;
-  }
-  .robot-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .profile-grid {
-    grid-template-columns: 1fr;
-  }
+/* Ensure Minimum Tap Target Height (≥40px) for Touch Usability */
+.btn,
+.topbar-icon-btn,
+.hamburger,
+.nav-item,
+.select-field,
+.text-field,
+.field input,
+.field select {
+  min-height: 40px;
 }
 
-@media (max-width: 960px) {
+.hamburger {
+  display: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-mid);
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.hamburger svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
+}
+
+/* --------------------------------------------------------------------------
+   1. TABLET & MOBILE BREAKPOINT (< 1200px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1199px) {
+  /* 1. Sidebar Collapses into Drawer Toggle */
   .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
     transform: translateX(-100%);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   .app.nav-open .sidebar {
     transform: translateX(0);
   }
+
   .app.nav-open .backdrop {
     display: block;
   }
+
   .main {
-    margin-left: 0;
+    margin-left: 0 !important;
+    width: 100%;
   }
+
   .hamburger {
     display: flex;
   }
-  .clock {
-    display: none;
+
+  /* 2. Metric Cards: 4 Cols -> 2 Cols on Tablet */
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
+  }
+
+  /* 2. Robot Cards: 3 Cols -> 2 Cols on Tablet */
+  .robot-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
+  }
+
+  /* 2-Column Section Grids & Profile Grid: Single Column */
+  .grid-2col,
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
   }
 }
 
-@media (max-width: 640px) {
-  .metric-grid {
-    grid-template-columns: 1fr;
-  }
-  .robot-grid {
-    grid-template-columns: 1fr;
-  }
-  .form-row {
-    grid-template-columns: 1fr;
-  }
+/* --------------------------------------------------------------------------
+   2. MOBILE BREAKPOINT (< 768px, Tested down to 375px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
   .content {
-    padding: 16px;
+    padding: 14px !important;
   }
+
+  /* 6. Topbar Adjustments on Mobile */
+  .topbar {
+    padding: 0 12px !important;
+    gap: 8px !important;
+    height: 58px !important;
+  }
+
+  .page-title {
+    font-size: 14px !important;
+  }
+
+  .page-crumb {
+    display: none !important;
+  }
+
+  .clock {
+    display: none !important;
+  }
+
+  .robot-select .rs-label {
+    display: none !important;
+  }
+
+  .robot-select {
+    padding: 6px 9px !important;
+    font-size: 12px !important;
+  }
+
+  /* 2. Metric Cards: 2 Cols -> 1 Col on Mobile */
+  .metric-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* 2. Robot Cards: 2 Cols -> 1 Col on Mobile */
+  .robot-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* 5. Forms (Profile / Settings / Assign Robot): Single Column Full-Width Inputs */
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .field input,
+  .field select {
+    width: 100% !important;
+  }
+
+  /* Filter Bar Controls Stack Responsively */
   .filter-bar {
-    gap: 8px;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
   }
-  .search-field input {
-    width: 150px;
+
+  .filter-bar .search-field,
+  .filter-bar .search-field input,
+  .filter-bar .select-field,
+  .filter-bar .seg-control,
+  .filter-bar .btn {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .seg-control {
+    justify-content: space-around;
+  }
+
+  /* 3. Charts: Responsive Height on Mobile */
+  .chart-box {
+    height: 220px !important;
+  }
+
+  .legend-row {
+    gap: 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* 4. Tables: Horizontal Scroll Container */
+  .panel {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 600px;
   }
 }
 
