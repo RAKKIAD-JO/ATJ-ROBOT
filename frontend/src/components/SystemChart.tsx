@@ -13,7 +13,6 @@ import {
 } from "recharts";
 
 import { fetchLatestSensorData, RawSensorData } from "../app/api/robot";
-import "@/styles/SystemChart.css";
 
 type SensorData = {
   battery: number;
@@ -77,24 +76,24 @@ const SystemChart = ({ deviceId }: Props) => {
     };
 
     if (deviceId) {
-      loadData(); 
+      loadData();
       intervalId = setInterval(() => {
         loadData();
-      }, 30000); // ทุก 30 วินาที
+      }, 30000);
     }
 
     return () => {
-      clearInterval(intervalId); // ล้างเมื่อ component ถูก unmount หรือ deviceId เปลี่ยน
+      clearInterval(intervalId);
     };
   }, [deviceId]);
 
-  if (loading) return <div>Loading chart...</div>;
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
-  if (data.length === 0) return <div>No data available</div>;
+  if (loading) return <div className="text-xs text-gray-500 py-4 text-center">Loading chart...</div>;
+  if (error) return <div className="text-xs text-red-500 py-4 text-center">{error}</div>;
+  if (data.length === 0) return <div className="text-xs text-gray-400 py-4 text-center">No data available</div>;
 
   return (
-    <div className="chart-container" style={{ width: "100%", height: 200 }}>
-      <ResponsiveContainer>
+    <div className="w-full h-52">
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
           <XAxis dataKey="time" label={{ value: "Time", position: "insideBottomRight", offset: -5 }} />

@@ -1,6 +1,8 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 require('dotenv').config();
 const mongoose = require('mongoose');
-const mongoUrl = process.env.MONGO_URL;
+const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017/esp32_db';
 const Esp32Status = require('./models/esp32status');
 const Esp32Data = require('./models/esp32data');
 const Esp32Sensor = require('./models/esp32sensor');

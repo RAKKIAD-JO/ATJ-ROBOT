@@ -3,9 +3,11 @@ const router = express.Router();
 const db = require("../postgres");
 const axios = require("axios");
 const authenticateToken = require('../middleware/auth');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config();
 
-const API_SERVER_URL = process.env.IOT_SERVER_URL;
+const API_SERVER_URL = process.env.IOT_SERVER_URL || "http://localhost:3000";
 
 router.post("/connect-robot", authenticateToken, async (req, res) => {
   const user_Id = req.userId;
@@ -167,8 +169,8 @@ router.get("/sensor-data/:robot_id", authenticateToken, async (req, res) => {
     if (error.response?.status === 404) {
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูล" });
     }
-    console.error("🚨 Database error:", error.message);
-    return res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์" });
+    console.error("🚨 Database error:", error);
+    return res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", details: error.message });
   }
 });
 // Home latest 10 data

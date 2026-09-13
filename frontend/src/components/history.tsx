@@ -1,486 +1,492 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import '@/styles/history.css';
 
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    TextField,
-    Pagination,
-    MenuItem,
-} from '@mui/material';
+import { useEffect, useState } from "react";
 import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
-import { useRouter } from "next/navigation";
-import Loading from "@/components/loading";
 
 interface HistoryItem {
-    _id?: string;
-    date: string;
-    plantType: string;
-    liquidType: string;
-    chemicalName: string;
-    area: number | string;
-    volume: number | string;
-    duration: string;
-    other: string;
+  id: string;
+  datetime: string;
+  robotName: string;
+  area: string;
+  plantType: string;
+  chemicalName: string;
+  volume: string;
+  badgeClass: "done" | "progress" | "cancel";
+  statusText: string;
 }
 
-interface User {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email: string;
-    profileImage: string;
-    isAdmin: boolean;
-}
+export default function History() {
+  const { selectedRobot } = useSelectedRobot();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [historyList, setHistoryList] = useState<HistoryItem[]>([]);
 
-type EditableHistoryItem = Partial<HistoryItem & { id: number }>;
+  // Modal State for Edit / Add History
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<HistoryItem | null>(null);
+  const [formData, setFormData] = useState<HistoryItem>({
+    id: "",
+    datetime: "",
+    robotName: "",
+    area: "",
+    plantType: "",
+    chemicalName: "",
+    volume: "",
+    badgeClass: "done",
+    statusText: "เสร็จสิ้น",
+  });
 
-export default function HistoryPage() {
-    const [data, setData] = useState<HistoryItem[]>([]);
-    const [editItem, setEditItem] = useState<EditableHistoryItem | null>(null);
-    const [filter, setFilter] = useState("ทั้งหมด");
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const { selectedRobot } = useSelectedRobot();
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
-    const router = useRouter();
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [modalMessage, setModalMessage] = useState<string | null>(null);
-    const [modalType, setModalType] = useState<"success" | "error">("success");
-
-    const isValidDate = (d: Date) => d instanceof Date && !isNaN(d.getTime());
-
-    // แปลงเป็น key ของวัน (UTC)
-    const toUTCDateKey = (date: Date): string => {
-        if (!isValidDate(date)) return "";
-        return date.toISOString().split('T')[0];
-    };
-
-    // ฟังก์ชันกรองวันที่
-    const filterByDate = (rowDate: string, startDate: string, endDate: string): boolean => {
-        const row = new Date(rowDate);
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        if (!isValidDate(row)) return false;
-        if (!startDate || !endDate) return true; // ถ้ายังไม่เลือกช่วงวันที่ ให้ผ่านทั้งหมด
-
-        const rowKey = toUTCDateKey(row);
-        const startKey = toUTCDateKey(start);
-        const endKey = toUTCDateKey(end);
-
-        return rowKey >= startKey && rowKey <= endKey;
-    };
-
-    useEffect(() => {
-        const now = new Date();
-        now.setHours(now.getHours() + 7);
-
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, "0");
-        const dd = String(now.getDate()).padStart(2, "0");
-        const todayStr = `${yyyy}-${mm}-${dd}`;
-
-        const start = new Date(now);
-        start.setDate(start.getDate() - 7);
-        const startY = start.getFullYear();
-        const startM = String(start.getMonth() + 1).padStart(2, "0");
-        const startD = String(start.getDate()).padStart(2, "0");
-        const startStr = `${startY}-${startM}-${startD}`;
-
-        setStartDate(startStr);
-        setEndDate(todayStr);
-    }, [selectedRobot]);
-
-    // ฟังก์ชันโหลดข้อมูล
-    const reloadData = async () => {
-        if (!selectedRobot) return;
-        setLoading(true);
-
-        try {
-            if (!selectedRobot || !startDate || !endDate) return;
-            const startStr = startDate;
-            const endStr = endDate;
-            const res = await fetch(
-                `/robot/usage-history?device_id=${selectedRobot.device_id}&startDate=${startStr}&endDate=${endStr}`,
-                {
-                    method: "GET",
-                    credentials: "include",
-                }
-            );
-
-            if (!res.ok) {
-                throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
-            }
-
-            const json = await res.json();
-
-            if (json.length === 0) {
-                setData([]);
-                setErrorMessage("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
-                return;
-            }
-
-            setData(json);
-            setCurrentPage(1);
-            setErrorMessage("");
-        } catch (error) {
-            console.error("โหลดข้อมูลล้มเหลว:", error);
-            setErrorMessage(
-                error instanceof Error
-                    ? error.message
-                    : "เกิดข้อผิดพลาดในการโหลดข้อมูล"
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // โหลดข้อมูลเมื่อเข้า หรือเมื่อเปลี่ยน robot / วันที่
-    useEffect(() => {
-        // โหลดข้อมูลผู้ใช้
-        fetch("/api/users/profile", {
-            method: "GET",
-            credentials: "include",
-        })
-            .then(async (res) => {
-                if (res.status === 403 || res.status === 401) {
-                    setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
-                    router.replace("/");
-                    return;
-                }
-                const data = await res.json();
-                setUser(data);
-            })
-            .catch((error) => {
-                setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
-            });
-        reloadData();
-    }, [router]);
-
-    useEffect(() => {
-        reloadData();
-        if (!selectedRobot) return;
-    }, [selectedRobot, startDate, endDate]);
-
-    // ฟังก์ชันบันทึกข้อมูลแก้ไข
-    const handleSave = async () => {
-        if (!editItem || !editItem._id) return;
-
-        const { _id, plantType, liquidType, chemicalName, area, other } = editItem;
-
-        const updatePayload = {
-            _id,
-            plantType,
-            liquidType,
-            chemicalName,
-            area,
-            other,
-        };
-
-        try {
-            const response = await fetch(`/robot/edit-History/${_id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                credentials: 'include',
-                body: JSON.stringify(updatePayload),
-            });
-
-            if (!response.ok) {
-                throw new Error("บันทึกข้อมูลล้มเหลว");
-            }
-
-            showModal("บันทึกข้อมูลเรียบร้อย", "success");
-
-            // 🔄 โหลดข้อมูลใหม่
-            await reloadData();
-
-            setEditItem(null);
-        } catch (error) {
-            console.error("เกิดข้อผิดพลาดในการอัปเดต:", error);
-            showModal(error instanceof Error ? error.message : "ไม่สามารถบันทึกข้อมูลได้");
-        }
-    };
-
-    // ดาวน์โหลด CSV
-    const downloadCSV = () => {
-        const headers = [
-            "วันที่", "ชนิดพืช", "ประเภทของเหลว", "ชื่อสารเคมี",
-            "พื้นที่ (ไร่)", "ปริมาณ (ลิตร)", "ระยะเวลา", "หมายเหตุ"
-        ];
-        const rows = filteredData.map(row => [
-            row.date, row.plantType, row.liquidType, row.chemicalName,
-            row.area, row.volume, row.duration, row.other
-        ]);
-
-        const csvContent = [
-            "\uFEFF",
-            [headers, ...rows].map(r => r.join(",")).join("\n")
-        ].join("");
-
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", "chemical_usage_history.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    function toThaiDatetimeString(dateStr: string) {
-        const date = new Date(dateStr);
-        return date.toLocaleString('th-TH', {
-            timeZone: 'UTC',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+  // Load saved history or fall back to default
+  useEffect(() => {
+    const saved = localStorage.getItem("atj_robot_history");
+    if (saved) {
+      try {
+        setHistoryList(JSON.parse(saved));
+        return;
+      } catch (e) {
+        console.error(e);
+      }
     }
+    setHistoryList([
+      {
+        id: "1",
+        datetime: "13/09/2569 · 01:01",
+        robotName: selectedRobot ? selectedRobot.robot_name : "Simulated Robo",
+        area: "แปลง B2 (ริมห้วย)",
+        plantType: "ข้าวโพด",
+        chemicalName: "ปุ๋ยน้ำอินทรีย์ สูตรเร่งโต",
+        volume: "3.98 ล.",
+        badgeClass: "progress",
+        statusText: "กำลังทำงาน",
+      },
+      {
+        id: "2",
+        datetime: "12/09/2569 · 06:40",
+        robotName: selectedRobot ? selectedRobot.robot_name : "Simulated Robo",
+        area: "แปลง B2 (ริมห้วย)",
+        plantType: "ข้าวโพด",
+        chemicalName: "ปุ๋ยน้ำอินทรีย์ สูตรเร่งโต",
+        volume: "18.20 ล.",
+        badgeClass: "done",
+        statusText: "เสร็จสิ้น",
+      },
+      {
+        id: "3",
+        datetime: "12/09/2569 · 06:10",
+        robotName: "Robo Field-02",
+        area: "แปลง A1 (หน้าโรงเก็บ)",
+        plantType: "ข้าวโพด",
+        chemicalName: "ยาป้องกันเชื้อรา",
+        volume: "12.50 ล.",
+        badgeClass: "done",
+        statusText: "เสร็จสิ้น",
+      },
+      {
+        id: "4",
+        datetime: "11/09/2569 · 15:32",
+        robotName: "Robo Field-03",
+        area: "แปลง C4 (สวนหลัง)",
+        plantType: "มันสำปะหลัง",
+        chemicalName: "ปุ๋ยเคมีสูตร 15-15-15",
+        volume: "9.10 ล.",
+        badgeClass: "cancel",
+        statusText: "ยกเลิก",
+      },
+      {
+        id: "5",
+        datetime: "11/09/2569 · 07:05",
+        robotName: selectedRobot ? selectedRobot.robot_name : "Simulated Robo",
+        area: "แปลง B2 (ริมห้วย)",
+        plantType: "ข้าวโพด",
+        chemicalName: "สารกำจัดวัชพืช",
+        volume: "15.80 ล.",
+        badgeClass: "done",
+        statusText: "เสร็จสิ้น",
+      },
+      {
+        id: "6",
+        datetime: "10/09/2569 · 06:55",
+        robotName: "Robo Field-02",
+        area: "แปลง A1 (หน้าโรงเก็บ)",
+        plantType: "ข้าวโพด",
+        chemicalName: "ปุ๋ยน้ำอินทรีย์ สูตรเร่งโต",
+        volume: "16.40 ล.",
+        badgeClass: "done",
+        statusText: "เสร็จสิ้น",
+      },
+    ]);
+  }, [selectedRobot]);
 
-    const showModal = (message: string, type: "success" | "error" = "success") => {
-        setModalMessage(message);
-        setModalType(type);
-    };
+  const saveHistoryList = (newList: HistoryItem[]) => {
+    setHistoryList(newList);
+    localStorage.setItem("atj_robot_history", JSON.stringify(newList));
+  };
 
-    const closeModal = () => {
-        setModalMessage(null);
-    };
+  const handleOpenAdd = () => {
+    const nowStr = new Date().toLocaleString("th-TH", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).replace(",", " ·");
 
-    useEffect(() => {
-        if (errorMessage) {
-            showModal(errorMessage, "error");
-        } else {
-            setModalMessage(null);
-        }
-    }, [errorMessage]);
-
-    // กรองข้อมูล
-    const filteredData = data.filter((row) => {
-        const matchType = filter === "ทั้งหมด" || row.liquidType === filter;
-        const matchDate = filterByDate(row.date, startDate, endDate);
-        return matchType && matchDate;
+    setEditingItem(null);
+    setFormData({
+      id: Date.now().toString(),
+      datetime: nowStr,
+      robotName: selectedRobot ? selectedRobot.robot_name : "Simulated Robo",
+      area: "แปลง A1 (หน้าโรงเก็บ)",
+      plantType: "ข้าวโพด",
+      chemicalName: "ปุ๋ยน้ำอินทรีย์",
+      volume: "10.00 ล.",
+      badgeClass: "done",
+      statusText: "เสร็จสิ้น",
     });
+    setShowModal(true);
+  };
 
-    const paginatedData = filteredData.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+  const handleOpenEdit = (item: HistoryItem) => {
+    setEditingItem(item);
+    setFormData({ ...item });
+    setShowModal(true);
+  };
 
-    if (loading) {
-        return <Loading />;
+  const handleStatusChange = (statusValue: "done" | "progress" | "cancel") => {
+    const statusTextMap = {
+      done: "เสร็จสิ้น",
+      progress: "กำลังทำงาน",
+      cancel: "ยกเลิก",
+    };
+    setFormData((prev) => ({
+      ...prev,
+      badgeClass: statusValue,
+      statusText: statusTextMap[statusValue],
+    }));
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingItem) {
+      const updated = historyList.map((item) =>
+        item.id === editingItem.id ? formData : item
+      );
+      saveHistoryList(updated);
+    } else {
+      saveHistoryList([formData, ...historyList]);
     }
+    setShowModal(false);
+  };
 
-    return (
-        <main className="main-history">
-            <div className="title-history">
-                <h2>ประวัติการทำงาน</h2>
+  const handleDelete = (id: string) => {
+    if (confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการประวัตินี้?")) {
+      const updated = historyList.filter((item) => item.id !== id);
+      saveHistoryList(updated);
+      setShowModal(false);
+    }
+  };
 
-                {!selectedRobot ? (
-                    <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
-                ) : (
-                    <>
-                        <div className="selected-robot-info">
-                            <p>หุ่นยนต์ที่เลือก:{" "}
-                                {user?.isAdmin
-                                    ? selectedRobot.device_id
-                                    : selectedRobot.robot_name}
-                            </p>
-                        </div>
-                        <div className="filter-section-date">
-                            <div className="filter-date">
-                                <label htmlFor="start">วันที่เริ่ม</label>
-                                <input
-                                    type="date"
-                                    id="start"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                />
-                            </div>
-                            <div className="filter-date">
-                                <label htmlFor="end">ถึงวันที่</label>
-                                <input
-                                    type="date"
-                                    id="end"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                />
-                            </div>
-                        </div>
+  const exportCSV = () => {
+    const headers = ["วันที่/เวลา", "หุ่นยนต์", "พื้นที่", "ชนิดพืช", "สารเคมี", "ปริมาณน้ำ", "สถานะ"];
+    const rows = filteredHistory.map((item) => [
+      `"${item.datetime}"`,
+      `"${item.robotName}"`,
+      `"${item.area}"`,
+      `"${item.plantType}"`,
+      `"${item.chemicalName}"`,
+      `"${item.volume}"`,
+      `"${item.statusText}"`,
+    ]);
+    const csvContent =
+      "data:text/csv;charset=utf-8,\uFEFF" +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `history_report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-                        <h3 className="subtitle">ประวัติที่แสดง: {filteredData.length} รายการ</h3>
+  const filteredHistory = historyList.filter((item) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      item.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.plantType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.chemicalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.robotName.toLowerCase().includes(searchTerm.toLowerCase());
 
-                        <div className="filter-section">
-                            {["ทั้งหมด", "สารเคมี", "ปุ๋ย", "น้ำ"].map((type) => (
-                                <button
-                                    key={type}
-                                    className={`filter-tab ${filter === type ? "active" : ""}`}
-                                    onClick={() => {
-                                        setFilter(type);
-                                        setCurrentPage(1);
-                                    }}
-                                >
-                                    {type}
-                                </button>
-                            ))}
-                            <button className="btn-download-csv" onClick={downloadCSV}>
-                                ดาวน์โหลด CSV
-                            </button>
-                        </div>
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "done" && item.badgeClass === "done") ||
+      (statusFilter === "progress" && item.badgeClass === "progress") ||
+      (statusFilter === "cancel" && item.badgeClass === "cancel");
 
-                        <div className="table-wrapper">
-                            <table className="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>วันที่</th>
-                                        <th>ชนิดพืช</th>
-                                        <th>ประเภทของเหลว</th>
-                                        <th>ชื่อสารเคมี</th>
-                                        <th>พื้นที่ (ไร่)</th>
-                                        <th>ปริมาณ (ลิตร)</th>
-                                        <th>ระยะเวลา</th>
-                                        <th>หมายเหตุ</th>
-                                        <th>การจัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredData.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={9} style={{ textAlign: "center", color: "red" }}>
-                                                {errorMessage || "ไม่พบข้อมูล"}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        paginatedData.map((row) => (
-                                            <tr key={row._id}>
-                                                <td>{toThaiDatetimeString(row.date)}</td>
-                                                <td>{row.plantType}</td>
-                                                <td>{row.liquidType}</td>
-                                                <td>{row.chemicalName}</td>
-                                                <td>{row.area}</td>
-                                                <td>{row.volume}</td>
-                                                <td>{row.duration}</td>
-                                                <td>{row.other}</td>
-                                                <td>
-                                                    <button className="btn-editItem" onClick={() => setEditItem(row)}>
-                                                        <span className="material-symbols-outlined">edit</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+    return matchesSearch && matchesStatus;
+  });
 
-                        {filteredData.length >= itemsPerPage && (
-                            <div className="pagination-container">
-                                <Pagination
-                                    count={Math.ceil(filteredData.length / itemsPerPage)}
-                                    page={currentPage}
-                                    onChange={(e, page) => setCurrentPage(page)}
-                                    color="primary"
-                                />
-                            </div>
-                        )}
+  return (
+    <main className="content">
+      {/* Section Head with Add Record button */}
+      <div className="section-head mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="section-title">ประวัติการทำงาน</div>
+          <div className="section-sub">บันทึกและจัดการประวัติการฉีดพ่นยาลดและปุ๋ยของหุ่นยนต์</div>
+        </div>
+        <button className="btn" onClick={handleOpenAdd}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#04231F" strokeWidth="2.4" className="w-4 h-4 mr-1.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          เพิ่มประวัติการทำงาน
+        </button>
+      </div>
 
-                        <Dialog className="edit-dialog" open={!!editItem} onClose={() => setEditItem(null)}>
-                            <DialogTitle>แก้ไขข้อมูล</DialogTitle>
-                            <DialogContent>
-                                <TextField
-                                    label="ชนิดพืช"
-                                    value={editItem?.plantType || ""}
-                                    onChange={(e) =>
-                                        setEditItem((prev) => ({ ...prev, plantType: e.target.value }))
-                                    }
-                                    fullWidth
-                                    margin="dense"
-                                />
-                                <TextField
-                                    select
-                                    label="ประเภทของเหลว"
-                                    value={editItem?.liquidType || ""}
-                                    onChange={(e) =>
-                                        setEditItem((prev) => ({ ...prev, liquidType: e.target.value }))
-                                    }
-                                    fullWidth
-                                    margin="dense"
-                                >
-                                    <MenuItem value="น้ำ">น้ำ</MenuItem>
-                                    <MenuItem value="สารเคมี">สารเคมี</MenuItem>
-                                    <MenuItem value="ปุ๋ย">ปุ๋ย</MenuItem>
-                                </TextField>
+      {/* Filter Bar */}
+      <div className="filter-bar">
+        <div className="search-field">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+          <input
+            className="text-field"
+            placeholder="ค้นหาแปลง, ชนิดพืช, สารเคมี..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-                                <TextField
-                                    label="ชื่อสารเคมี"
-                                    value={editItem?.chemicalName || ""}
-                                    onChange={(e) =>
-                                        setEditItem((prev) => ({ ...prev, chemicalName: e.target.value }))
-                                    }
-                                    fullWidth
-                                    margin="dense"
-                                />
-                                <TextField
-                                    label="พื้นที่ (ไร่)"
-                                    type="number"
-                                    value={editItem?.area || ""}
-                                    onChange={(e) =>
-                                        setEditItem((prev) => ({ ...prev, area: Number(e.target.value) }))
-                                    }
-                                    fullWidth
-                                    margin="dense"
-                                />
-                                <TextField
-                                    label="หมายเหตุ"
-                                    value={editItem?.other || ""}
-                                    onChange={(e) =>
-                                        setEditItem((prev) => ({ ...prev, other: e.target.value }))
-                                    }
-                                    fullWidth
-                                    margin="dense"
-                                />
-                            </DialogContent>
-                            <DialogActions>
-                                <Button type="button" onClick={() => setEditItem(null)}>ยกเลิก</Button>
-                                <Button type="button" variant="contained" onClick={handleSave}>บันทึก</Button>
-                            </DialogActions>
-                        </Dialog>
-                    </>
-                )}
-            </div>
-            {modalMessage && (
-                <div className="modal-overlay">
-                    <div className="modal-box">
-                        <button className="modal-close" onClick={closeModal}>×</button>
-                        {modalType === "success" ? (
-                            <div className="checkmark-animation">
-                                <svg viewBox="0 0 52 52" className="checkmark">
-                                    <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
-                                    <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
-                                </svg>
-                            </div>
-                        ) : (
-                            <div className="crossmark-animation">
-                                <svg viewBox="0 0 52 52" className="crossmark">
-                                    <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
-                                    <path className="crossmark-line1" d="M16 16 L36 36" />
-                                    <path className="crossmark-line2" d="M36 16 L16 36" />
-                                </svg>
-                            </div>
-                        )}
-                        <p>{modalMessage}</p>
-                        <button className="modal-ok" onClick={closeModal}>ตกลง</button>
-                    </div>
-                </div>
+        <select
+          className="select-field"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">สถานะทั้งหมด</option>
+          <option value="done">เสร็จสิ้น</option>
+          <option value="progress">กำลังทำงาน</option>
+          <option value="cancel">ยกเลิก</option>
+        </select>
+
+        <input
+          type="date"
+          className="select-field"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+        />
+
+        <button className="btn secondary" style={{ marginLeft: "auto" }} onClick={exportCSV}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16" />
+          </svg>
+          ส่งออก CSV
+        </button>
+      </div>
+
+      {/* History Table Panel */}
+      <div className="panel" style={{ overflowX: "auto" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>วันที่ / เวลาเริ่ม</th>
+              <th>หุ่นยนต์</th>
+              <th>พื้นที่</th>
+              <th>ชนิดพืช</th>
+              <th>สารเคมี</th>
+              <th>ปริมาณน้ำ</th>
+              <th>สถานะ</th>
+              <th className="text-right pr-4">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredHistory.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="text-center py-6 text-[var(--text-low)]">
+                  ไม่พบประวัติการทำงานตามเงื่อนไขที่ค้นหา
+                </td>
+              </tr>
+            ) : (
+              filteredHistory.map((row) => (
+                <tr key={row.id}>
+                  <td className="num">{row.datetime}</td>
+                  <td>{row.robotName}</td>
+                  <td>{row.area}</td>
+                  <td>{row.plantType}</td>
+                  <td>{row.chemicalName}</td>
+                  <td className="num">{row.volume}</td>
+                  <td>
+                    <span className={`badge ${row.badgeClass}`}>{row.statusText}</span>
+                  </td>
+                  <td className="text-right pr-4">
+                    <button
+                      className="btn ghost text-xs py-1 px-2.5"
+                      onClick={() => handleOpenEdit(row)}
+                      title="แก้ไขประวัตินี้"
+                    >
+                      <svg className="w-3.5 h-3.5 mr-1 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                      แก้ไข
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
-        </main>
-    );
+          </tbody>
+        </table>
+      </div>
+
+      {/* Edit / Add History Modal Popup */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
+          <div className="panel max-w-lg w-full p-6 relative shadow-2xl border border-[var(--border)] animate-in fade-in zoom-in duration-200">
+            {/* Close Button */}
+            <button
+              className="absolute top-4 right-4 text-[var(--text-low)] hover:text-[var(--text-hi)] transition-colors p-1"
+              onClick={() => setShowModal(false)}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Modal Title */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[var(--text-hi)]">
+                  {editingItem ? "แก้ไขประวัติการทำงาน" : "เพิ่มประวัติการทำงานใหม่"}
+                </h3>
+                <p className="text-xs text-[var(--text-low)]">
+                  กรอกรายละเอียดข้อมูลการฉีดพ่นและสภาวะการทำงาน
+                </p>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSave} className="flex flex-col gap-3.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="field">
+                  <label>วันที่ / เวลาเริ่ม</label>
+                  <input
+                    type="text"
+                    className="text-field"
+                    value={formData.datetime}
+                    onChange={(e) => setFormData({ ...formData, datetime: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label>ชื่อหุ่นยนต์</label>
+                  <input
+                    type="text"
+                    className="text-field"
+                    value={formData.robotName}
+                    onChange={(e) => setFormData({ ...formData, robotName: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="field">
+                  <label>พื้นที่ / แปลง</label>
+                  <input
+                    type="text"
+                    className="text-field"
+                    value={formData.area}
+                    onChange={(e) => setFormData({ ...formData, area: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label>ชนิดพืช</label>
+                  <input
+                    type="text"
+                    className="text-field"
+                    value={formData.plantType}
+                    onChange={(e) => setFormData({ ...formData, plantType: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="field">
+                  <label>สารเคมี / ปุ๋ย</label>
+                  <input
+                    type="text"
+                    className="text-field"
+                    value={formData.chemicalName}
+                    onChange={(e) => setFormData({ ...formData, chemicalName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label>ปริมาณน้ำที่ใช้</label>
+                  <input
+                    type="text"
+                    className="text-field"
+                    value={formData.volume}
+                    onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <label>สถานะการทำงาน</label>
+                <select
+                  className="select-field w-full"
+                  value={formData.badgeClass}
+                  onChange={(e) =>
+                    handleStatusChange(e.target.value as "done" | "progress" | "cancel")
+                  }
+                >
+                  <option value="done">เสร็จสิ้น (done)</option>
+                  <option value="progress">กำลังทำงาน (progress)</option>
+                  <option value="cancel">ยกเลิก (cancel)</option>
+                </select>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-[var(--border-soft)]">
+                {editingItem ? (
+                  <button
+                    type="button"
+                    className="btn ghost text-[var(--danger)] hover:bg-[var(--danger-soft)] text-xs"
+                    onClick={() => handleDelete(editingItem.id)}
+                  >
+                    ลบประวัตินี้
+                  </button>
+                ) : (
+                  <div></div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn secondary text-xs"
+                    onClick={() => setShowModal(false)}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button type="submit" className="btn text-xs">
+                    บันทึกข้อมูล
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </main>
+  );
 }

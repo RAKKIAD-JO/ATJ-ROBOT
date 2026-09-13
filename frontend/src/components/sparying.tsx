@@ -1,32 +1,31 @@
-import "@/styles/sparying.css"
-// import 'boxicons/css/boxicons.min.css';
-export default function sparying() {
+export default function Spraying() {
     return (
-        <main className="main-sparying">
-            <div className="second-main-sparying">
-                <div className="title-sparying">
-                    <div className="tail-title-sparying"><div className="head-title-sparying">หุ่</div>นยนต์ฉีดพ่นสำหรับการ</div>
-                    <div className="under-sparying">เกษตกรขนาดเล็ก</div>
+        <main className="w-full md:w-[calc(100%-16rem)] md:ml-64 p-4 md:p-8 mt-2">
+            <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/60">
+                <div className="mb-6">
+                    <h2 className="text-xl font-bold text-gray-800">
+                        <span className="text-[#17a2b8]">หุ่</span>นยนต์ฉีดพ่นสำหรับการ
+                    </h2>
+                    <p className="text-sm text-gray-500">เกษตรกรขนาดเล็ก</p>
                 </div>
-                <div className="body-sparying">
-                    <div className="cardContainer-sparying">
-                        <div className="box-sparying-connected">
-                            <div className="box-header-text">
-                                แสดงสถานะการฉีดพ่น
+                <div>
+                    <div className="bg-slate-50 p-6 rounded-2xl">
+                        <div className="text-base font-bold text-[#17a2b8] mb-4">
+                            แสดงสถานะการฉีดพ่น
+                        </div>
+                        <div className="flex flex-col md:flex-row items-center gap-6">
+                            <div className="w-24 h-24 shrink-0">
+                                <img src="/spray.png" alt="Spray" className="w-full h-full object-contain" />
                             </div>
-                            <div className="state-sparying">
-                                <div className="img-spary">
-                                    <img src="/spray.png" alt="" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 text-sm text-gray-700">
+                                <div className="space-y-2">
+                                    <p><span className="font-semibold text-gray-800">ชนิดพืช :</span> -</p>
+                                    <p><span className="font-semibold text-gray-800">ประเภทของเหลว :</span> -</p>
+                                    <p><span className="font-semibold text-gray-800">ชื่อสารเคมี :</span> -</p>
                                 </div>
-                                <div className="calss-one">
-                                    <p>ชนิดพืช : </p>
-                                    <p>ประเภทของเหลว : </p>
-                                    <p>ชื่อสารเคมี : </p>
-                                </div>
-                                <div className="calss-two">
-                                    {/* <p>ปริมาณการใช้สารเคมี : </p> */}
-                                    <p>พื้นที่ : </p>
-                                    <p>ระยะเวลา : </p>
+                                <div className="space-y-2">
+                                    <p><span className="font-semibold text-gray-800">พื้นที่ :</span> -</p>
+                                    <p><span className="font-semibold text-gray-800">ระยะเวลา :</span> -</p>
                                 </div>
                             </div>
                         </div>
@@ -34,6 +33,5 @@ export default function sparying() {
                 </div>
             </div>
         </main>
-    )
+    );
 }
-

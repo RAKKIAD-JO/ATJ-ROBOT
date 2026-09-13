@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSelectedRobot } from '@/app/contexts/SelectedRobotContext';
 import { useRouter } from 'next/navigation';
-import '@/styles/admin.css';
 
 interface Robot {
     robot_id: number;
@@ -37,7 +36,6 @@ export default function AdminPage() {
     const [user, setUser] = useState<User | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<Robot | null>(null);
     const [modalType, setModalType] = useState<"success" | "error">("success");
-
 
     useEffect(() => {
         fetch("/api/users/profile", {
@@ -109,7 +107,6 @@ export default function AdminPage() {
         }
     }, []);
 
-
     useEffect(() => {
         fetchRobots();
     }, [fetchRobots]);
@@ -134,6 +131,7 @@ export default function AdminPage() {
 
         router.push('/home');
     };
+
     useEffect(() => {
         if (user && user.isAdmin === false) {
             router.replace("/home");
@@ -179,121 +177,178 @@ export default function AdminPage() {
     };
 
     return (
-        <div className="admin-container">
-            <h1>จัดการ Token และหุ่นยนต์</h1>
+        <div className="w-full md:w-[calc(100%-16rem)] md:ml-64 p-4 md:p-8 mt-2 transition-all">
+            <h1 className="text-2xl font-extrabold text-gray-800 mb-6">จัดการ Token และหุ่นยนต์</h1>
 
-            <form onSubmit={handleGenerateToken} className="generate-form">
+            <form onSubmit={handleGenerateToken} className="flex flex-col sm:flex-row gap-4 mb-6">
                 <input
                     type="text"
                     placeholder="กรอก Device ID"
                     value={deviceId}
                     onChange={(e) => setDeviceId(e.target.value)}
+                    className="flex-1 p-3 bg-gray-100 rounded-xl border border-transparent text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-[#1daac0] transition-colors"
                 />
-                <button type="submit">สร้าง Token</button>
+                <button
+                    type="submit"
+                    className="px-6 py-3 bg-[#1daac0] hover:bg-[#148b9e] text-white font-bold rounded-xl text-sm transition-colors shadow-md shrink-0"
+                >
+                    สร้าง Token
+                </button>
             </form>
 
             {token && (
-                <div className="token-result">
-                    <strong>Token ที่สร้าง:</strong> <code>{token}</code>
+                <div className="mb-6 p-4 bg-gray-100 rounded-xl text-sm text-gray-800 break-all border border-gray-200">
+                    <strong>Token ที่สร้าง:</strong> <code className="bg-white px-2 py-1 rounded text-xs text-[#1daac0]">{token}</code>
                 </div>
             )}
 
-            <div className="filter-section-admin">
-                <div className="status-filter-buttons">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="flex items-center gap-4">
                     <button
                         type="button"
-                        className={statusFilter === 'all' ? 'active' : ''}
+                        className={`text-sm font-medium transition-colors ${
+                            statusFilter === 'all' ? 'text-[#17a2b8] underline font-bold' : 'text-gray-600 hover:text-[#17a2b8]'
+                        }`}
                         onClick={() => setStatusFilter('all')}
                     >
                         ทั้งหมด
                     </button>
                     <button
                         type="button"
-                        className={statusFilter === 'online' ? 'active' : ''}
+                        className={`text-sm font-medium transition-colors ${
+                            statusFilter === 'online' ? 'text-[#17a2b8] underline font-bold' : 'text-gray-600 hover:text-[#17a2b8]'
+                        }`}
                         onClick={() => setStatusFilter('online')}
                     >
                         ออนไลน์
                     </button>
                     <button
                         type="button"
-                        className={statusFilter === 'offline' ? 'active' : ''}
+                        className={`text-sm font-medium transition-colors ${
+                            statusFilter === 'offline' ? 'text-[#17a2b8] underline font-bold' : 'text-gray-600 hover:text-[#17a2b8]'
+                        }`}
                         onClick={() => setStatusFilter('offline')}
                     >
                         ออฟไลน์
                     </button>
                 </div>
-                <div className="sear-box">
+                <div className="w-full sm:w-72">
                     <input
                         type="text"
                         placeholder="ค้นหา Device ID, ชื่อ หรือ อีเมล"
                         value={searchRobot}
                         onChange={(e) => setSearchRobot(e.target.value)}
+                        className="w-full p-2.5 bg-gray-100 rounded-xl text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-gray-300 border border-transparent transition-colors"
                     />
                 </div>
             </div>
-            <div className="robot-grid">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredRobots.length === 0 ? (
-                    <p>ไม่พบหุ่นยนต์ที่กำลังออนไลน์</p>
+                    <p className="text-gray-500 text-sm">ไม่พบหุ่นยนต์ที่กำลังออนไลน์</p>
                 ) : (
                     filteredRobots.map((robot) => (
-                        <div className={`robot-card ${robot.status}`} key={robot.device_id}>
+                        <div
+                            className={`bg-white rounded-2xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all relative border-l-4 ${
+                                robot.status === "online" ? "border-l-[#17a2b8]" : "border-l-gray-300"
+                            }`}
+                            key={robot.device_id}
+                        >
                             <button
-                                className="delete-icon"
+                                className="absolute top-3 right-4 text-gray-300 hover:text-red-500 text-2xl font-bold transition-colors"
                                 onClick={() => handleDeleteRobot(robot)}
                                 title="ลบหุ่นยนต์"
-                            >×</button>
-                            <h3>{robot.device_id}</h3>
-                            <p>
-                                <strong>ชื่อ:</strong>{" "}
-                                {robot.firstName ? `${robot.firstName} ${robot.lastName || ""}` : "ไม่มีเจ้าข้อง"}
+                            >
+                                ×
+                            </button>
+                            <h3 className="text-lg font-bold text-[#17a2b8] mb-2 pr-6 break-all">{robot.device_id}</h3>
+                            <p className="text-xs text-gray-600 mb-1">
+                                <span className="font-semibold text-gray-800">ชื่อ:</span>{" "}
+                                {robot.firstName ? `${robot.firstName} ${robot.lastName || ""}` : "ไม่มีเจ้าของ"}
                             </p>
-                            <p><strong>อีเมล:</strong> {robot.email || "ไม่มีเจ้าข้อง"}</p>
-                            <p><strong>เบอร์โทร:</strong> {robot.phone || "ไม่มีเจ้าข้อง"}</p>
-                            <p className={robot.status === "online" ? "status online" : "status offline"}>
-                                <strong>สถานะ:</strong> {robot.status === "online" ? "ออนไลน์" : "ออฟไลน์"}
+                            <p className="text-xs text-gray-600 mb-1 break-all">
+                                <span className="font-semibold text-gray-800">อีเมล:</span> {robot.email || "ไม่มีเจ้าของ"}
                             </p>
-                            <p><strong>Token:</strong> {robot.token}</p>
+                            <p className="text-xs text-gray-600 mb-1">
+                                <span className="font-semibold text-gray-800">เบอร์โทร:</span> {robot.phone || "ไม่มีเจ้าของ"}
+                            </p>
+                            <p className="text-xs mb-1">
+                                <span className="font-semibold text-gray-800">สถานะ:</span>{" "}
+                                <span className={robot.status === "online" ? "text-[#17a2b8] font-bold" : "text-gray-400 font-bold"}>
+                                    {robot.status === "online" ? "ออนไลน์" : "ออฟไลน์"}
+                                </span>
+                            </p>
+                            <p className="text-xs text-gray-600 mb-4 break-all">
+                                <span className="font-semibold text-gray-800">Token:</span> {robot.token}
+                            </p>
 
-                            <button onClick={() => handleSelectRobot(robot)}>ดูการทำงาน</button>
+                            <button
+                                className="w-full py-2 bg-gray-100 hover:bg-[#17a2b8] text-gray-700 hover:text-white font-medium text-xs rounded-lg transition-colors"
+                                onClick={() => handleSelectRobot(robot)}
+                            >
+                                ดูการทำงาน
+                            </button>
                         </div>
                     ))
                 )}
             </div>
+
+            {/* Modal */}
             {modalMessage && (
-                <div className="modal-overlay">
-                    <div className="modal-box">
-                        <button className="modal-close" onClick={closeModal}>×</button>
-                        {modalType === "success" ? (
-                            <div className="checkmark-animation">
-                                <svg viewBox="0 0 52 52" className="checkmark">
-                                    <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
-                                    <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
-                                </svg>
-                            </div>
-                        ) : (
-                            <div className="crossmark-animation">
-                                <svg viewBox="0 0 52 52" className="crossmark">
-                                    <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
-                                    <path className="crossmark-line1" d="M16 16 L36 36" />
-                                    <path className="crossmark-line2" d="M36 16 L16 36" />
-                                </svg>
-                            </div>
-                        )}
-                        <p>{modalMessage}</p>
-                        <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+                    <div className="bg-white p-8 rounded-3xl w-80 text-center relative shadow-2xl animate-fade-in">
+                        <button
+                            className="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-2xl font-bold transition-colors"
+                            onClick={closeModal}
+                        >
+                            ×
+                        </button>
+                        <div className="flex justify-center items-center mb-4">
+                            <span
+                                className={`material-symbols-outlined text-5xl ${
+                                    modalType === "success" ? "text-[#17a2b8]" : "text-red-500"
+                                }`}
+                            >
+                                {modalType === "success" ? "check_circle" : "cancel"}
+                            </span>
+                        </div>
+                        <p className="text-gray-700 text-sm mb-6">{modalMessage}</p>
+                        <button
+                            className="w-full py-2 bg-[#88b7b9] hover:bg-[#17a2b8] text-white font-medium rounded-xl text-sm transition-colors shadow-md"
+                            onClick={closeModal}
+                        >
+                            ตกลง
+                        </button>
                     </div>
                 </div>
             )}
+
+            {/* Delete Confirmation Modal */}
             {deleteConfirm && (
-                <div className="modal-overlay">
-                    <div className="modal-box">
-                        <button className="modal-close" onClick={() => setDeleteConfirm(null)}>×</button>
-                        <div className="crossmark-animation">
-                            <p>คุณแน่ใจหรือไม่ว่าต้องการลบหุ่นยนต์ <strong>{deleteConfirm.device_id}</strong> ?</p>
-                            <div className="modal-actions">
-                                <button className="modal-ok" onClick={confirmDelete}>ยืนยัน</button>
-                                <button className="modal-cancel" onClick={() => setDeleteConfirm(null)}>ยกเลิก</button>
-                            </div>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+                    <div className="bg-white p-8 rounded-3xl w-80 text-center relative shadow-2xl animate-fade-in">
+                        <button
+                            className="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-2xl font-bold transition-colors"
+                            onClick={() => setDeleteConfirm(null)}
+                        >
+                            ×
+                        </button>
+                        <p className="text-gray-700 text-sm mb-6">
+                            คุณแน่ใจหรือไม่ว่าต้องการลบหุ่นยนต์ <strong className="text-red-600">{deleteConfirm.device_id}</strong> ?
+                        </p>
+                        <div className="flex justify-center gap-3">
+                            <button
+                                className="flex-1 py-2 bg-[#88b7b9] hover:bg-[#17a2b8] text-white font-medium rounded-xl text-sm transition-colors shadow-md"
+                                onClick={confirmDelete}
+                            >
+                                ยืนยัน
+                            </button>
+                            <button
+                                className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl text-sm transition-colors shadow-md"
+                                onClick={() => setDeleteConfirm(null)}
+                            >
+                                ยกเลิก
+                            </button>
                         </div>
                     </div>
                 </div>

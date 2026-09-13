@@ -38,18 +38,19 @@ services:
     environment:
       - NODE_ENV=production 
       - DB_USER=${DB_USER}
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=db
       - DB_DATABASE=${DB_DATABASE}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_PORT=${DB_PORT}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASS=${EMAIL_PASS}
+      - IOT_SERVER_URL=http://iot-server:3000
     depends_on:
       - db
     networks:
       - ${NETWORK_NAME}
     volumes:
-      - /home/atjrobotadmin/ATJ-web-server/backend/uploads/profile_Image:${IMAGES_PROFILE_VOLUME}
+      - ./backend/uploads/profile_Image:${IMAGES_PROFILE_VOLUME}
 
 
   nextjs:
@@ -57,6 +58,9 @@ services:
     container_name: server-nextjs
     depends_on:
       - backend
+    environment:
+      - BACKEND_INTERNAL_URL=http://backend:5000
+      - IOT_INTERNAL_URL=http://iot-server:3000
     ports:
       - "4000:4000"
     networks:
@@ -80,7 +84,7 @@ services:
     depends_on:
       - mongodb
     environment:
-      - MONGO_URL=${MONGO_URL}
+      - MONGO_URL=mongodb://mongodb:27017/esp32_db
     networks:
       - ${NETWORK_NAME}
 
