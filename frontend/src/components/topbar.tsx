@@ -67,13 +67,30 @@ export default function Topbar() {
   const openNav = () => {
     const appEl = document.getElementById("app");
     if (appEl) {
-      appEl.classList.toggle("nav-open");
+      if (window.innerWidth >= 1200) {
+        appEl.classList.toggle("sidebar-closed");
+      } else {
+        appEl.classList.toggle("nav-open");
+      }
     }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/users/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    window.dispatchEvent(new Event("userChanged"));
+    window.location.href = "/";
   };
 
   return (
     <header className="topbar">
-      <button className="hamburger" onClick={openNav} aria-label="เปิดเมนู">
+      <button className="hamburger" onClick={openNav} aria-label="เปิด/ปิด เมนูข้าง" title="ซ่อน/แสดง เมนูข้าง">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M4 7h16M4 12h16M4 17h16" />
         </svg>
@@ -150,6 +167,20 @@ export default function Topbar() {
             <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" strokeWidth="1.8" />
           </svg>
         )}
+      </button>
+
+      {/* Logout Button */}
+      <button
+        className="topbar-icon-btn text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+        onClick={handleLogout}
+        title="ออกจากระบบ (Logout)"
+        aria-label="Logout"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+          <path d="M16 17l5-5-5-5" />
+          <path d="M21 12H9" />
+        </svg>
       </button>
 
       {/* Live Clock */}

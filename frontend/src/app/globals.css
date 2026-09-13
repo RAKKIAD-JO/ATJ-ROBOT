@@ -111,7 +111,122 @@ button {
   left: 0;
   bottom: 0;
   z-index: 40;
-  transition: transform 0.22s ease, background-color 0.25s ease, border-color 0.25s ease;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* --------------------------------------------------------------------------
+   ICON-ONLY COLLAPSED SIDEBAR MODE (Desktop ≥ 1200px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1200px) {
+  .app.sidebar-closed .sidebar {
+    width: 72px;
+    transform: none !important;
+  }
+
+  .app.sidebar-closed .main {
+    margin-left: 72px !important;
+    width: calc(100% - 72px) !important;
+  }
+
+  .app.sidebar-closed .brand-text,
+  .app.sidebar-closed .nav-label,
+  .app.sidebar-closed .nav-section-label,
+  .app.sidebar-closed .footer-user,
+  .app.sidebar-closed .add-btn {
+    display: none !important;
+  }
+
+  .app.sidebar-closed .sidebar-brand {
+    padding: 16px 8px;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .app.sidebar-closed .sidebar-brand .brand-mark {
+    display: none;
+  }
+
+  .app.sidebar-closed .sidebar-close-toggle {
+    margin-left: 0 !important;
+  }
+
+  .app.sidebar-closed .toggle-arrow {
+    transform: rotate(180deg);
+  }
+
+  .app.sidebar-closed .sidebar-nav {
+    padding: 12px 6px;
+  }
+
+  .app.sidebar-closed .nav-item {
+    justify-content: center;
+    padding: 0;
+    width: 46px;
+    height: 46px;
+    margin: 4px auto;
+    border-radius: 10px;
+  }
+
+  .app.sidebar-closed .sidebar-footer {
+    padding: 16px 6px;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .app.sidebar-closed .logout-btn {
+    margin-left: 0;
+  }
+}
+
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar {
+  height: 64px;
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.hamburger {
+  display: flex;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-hi);
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hamburger:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.hamburger svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
 }
 
 .sidebar-brand {
@@ -286,49 +401,6 @@ button {
 
 .logout-btn:hover {
   color: var(--danger);
-}
-
-.main {
-  margin-left: var(--sidebar-w);
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.topbar {
-  height: 64px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--topbar-bg);
-  backdrop-filter: blur(6px);
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
-}
-
-.hamburger {
-  display: none;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text-mid);
-  width: 34px;
-  height: 34px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.hamburger svg {
-  width: 17px;
-  height: 17px;
-  stroke-width: 1.8;
 }
 
 .page-title-block {

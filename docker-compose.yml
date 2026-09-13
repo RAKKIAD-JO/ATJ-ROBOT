@@ -38,7 +38,7 @@ services:
     environment:
       - NODE_ENV=production 
       - DB_USER=${DB_USER}
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=db
       - DB_DATABASE=${DB_DATABASE}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_PORT=${DB_PORT}
@@ -84,7 +84,7 @@ services:
     depends_on:
       - mongodb
     environment:
-      - MONGO_URL=${MONGO_URL}
+      - MONGO_URL=mongodb://mongodb:27017/esp32_db
     networks:
       - ${NETWORK_NAME}
 

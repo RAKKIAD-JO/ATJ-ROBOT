@@ -16,9 +16,14 @@ const resendOTP = new Resend(process.env.RESEND_API_KEY_OTP);
 
 
 // ตั้งค่า storage สำหรับ multer
+const uploadDir = path.join(__dirname, 'uploads/profile_Image');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, 'uploads/profile_Image'));
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname);
@@ -107,10 +112,16 @@ router.post("/register", async (req, res) => {
 
 // login
 router.post("/login", async (req, res) => {
-  const { email, passWord } = req.body;
+  const email = (req.body.email || "").trim();
+  const passWord = req.body.passWord || req.body.password;
+
+  if (!email || !passWord) {
+    return res.status(400).json({ success: false, message: "กรุณากรอกอีเมลและรหัสผ่าน" });
+  }
+
   try {
     const userResult = await pool.query(
-      `SELECT * FROM users WHERE email = $1`,
+      `SELECT * FROM users WHERE LOWER(email) = LOWER($1)`,
       [email]
     );
 
@@ -128,12 +139,13 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ success: false, message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
     }
 
+    const secretKey = process.env.JWT_SECRET || 'admin';
     const token = jwt.sign(
       {
         userId: user.user_id,
         isAdmin: user.is_admin || false,
       },
-      process.env.JWT_SECRET,
+      secretKey,
       { expiresIn: "1d" }
     );
 
@@ -153,7 +165,6 @@ router.post("/login", async (req, res) => {
         email: user.email,
         phone: user.phone,
         isAdmin: user.is_admin || false,
-
       },
     });
   } catch (error) {
@@ -286,27 +297,46 @@ router.get("/profile", authenticateToken, async (req, res) => {
 // editProfile
 router.put("/profile", authenticateToken, upload.single('profileImage'), async (req, res) => {
   const userId = req.userId;
-  const { fullName, phone, newPassword } = req.body;
-  let firstName = "";
-  let lastName = "";
-  if (fullName) {
-    const arr = fullName.split(" ");
+  const { fullName, firstName: inputFirstName, lastName: inputLastName, phone, oldPassword, newPassword } = req.body;
+  
+  let firstName = inputFirstName || "";
+  let lastName = inputLastName || "";
+  if (!firstName && !lastName && fullName) {
+    const arr = fullName.trim().split(" ");
     firstName = arr[0] || "";
     lastName = arr.slice(1).join(" ") || "";
   }
+
   let profileImagePath = req.file ? `/uploads/profile_Image/${req.file.filename}` : undefined;
 
   try {
+    const currentUserRes = await pool.query(
+      `SELECT * FROM users WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (currentUserRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "ไม่พบผู้ใช้" });
+    }
+
+    const currentUser = currentUserRes.rows[0];
+
+    // Check old password if changing password
+    if (newPassword) {
+      if (oldPassword) {
+        const isOldMatch = await bcrypt.compare(oldPassword, currentUser.password);
+        if (!isOldMatch) {
+          return res.status(400).json({ success: false, message: "รหัสผ่านเดิมไม่ถูกต้อง" });
+        }
+      }
+    }
+
     if (req.file) {
-      const oldImg = await pool.query(
-        `SELECT profile_image FROM users WHERE user_id = $1`,
-        [userId]
-      );
-      const oldPath = oldImg.rows[0]?.profile_image;
+      const oldPath = currentUser.profile_image;
       if (oldPath && oldPath.startsWith('/uploads/profile_Image/')) {
         const fullPath = path.join(__dirname, oldPath);
         if (fs.existsSync(fullPath)) {
-          await unlinkAsync(fullPath);
+          try { await unlinkAsync(fullPath); } catch (e) {}
         }
       }
     }
@@ -315,11 +345,11 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
     const params = [];
     let idx = 1;
 
-    if (firstName !== undefined && firstName !== "") {
+    if (firstName) {
       fields.push(`first_name = $${idx++}`);
       params.push(firstName);
     }
-    if (lastName !== undefined && lastName !== "") {
+    if (lastName) {
       fields.push(`last_name = $${idx++}`);
       params.push(lastName);
     }
@@ -338,14 +368,26 @@ router.put("/profile", authenticateToken, upload.single('profileImage'), async (
     }
 
     if (fields.length === 0) {
-      return res.status(400).json({ message: "ไม่มีข้อมูลที่ต้องการอัปเดต" });
+      return res.status(400).json({ success: false, message: "ไม่มีข้อมูลที่ต้องการอัปเดต" });
     }
 
     params.push(userId);
-    const sql = `UPDATE users SET ${fields.join(", ")} WHERE user_id = $${idx}`;
-    await pool.query(sql, params);
+    const sql = `UPDATE users SET ${fields.join(", ")} WHERE user_id = $${idx} RETURNING user_id, first_name, last_name, phone, email, profile_image, is_admin`;
+    const updateResult = await pool.query(sql, params);
+    const updatedUser = updateResult.rows[0];
 
-    res.json({ message: "อัปเดตข้อมูลสำเร็จ" });
+    res.json({
+      success: true,
+      message: "อัปเดตข้อมูลส่วนตัวสำเร็จ",
+      user: {
+        firstName: updatedUser.first_name,
+        lastName: updatedUser.last_name,
+        phone: updatedUser.phone,
+        email: updatedUser.email,
+        profileImage: updatedUser.profile_image,
+        isAdmin: updatedUser.is_admin,
+      }
+    });
   } catch (error) {
     console.error("EDIT PROFILE ERROR:", error);
     res.status(500).json({ success: false, error: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล" });
@@ -413,8 +455,13 @@ router.get("/verify-email", async (req, res) => {
 
 // logout
 router.post("/logout", (req, res) => {
-  res.clearCookie('token');
-  res.json({ message: "ออกจากระบบสำเร็จ" });
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
+  res.json({ success: true, message: "ออกจากระบบสำเร็จ" });
 });
 
 // Test Send Email Route
