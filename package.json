@@ -1,4 +1,13 @@
 {
+  "name": "atj-web-server",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,IOT-SERVER,FRONTEND\" -c \"blue,magenta,cyan\" \"npm --prefix backend start\" \"npm --prefix iot-server start\" \"npm --prefix frontend run dev\"",
+    "sim": "node simulate_robot.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
   "dependencies": {
     "react-spinners": "^0.17.0",
     "resend": "^6.0.3",

@@ -1,37 +1,50 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { LineChart, BarChart } from "@mui/x-charts";
-import { PieChart } from "@mui/x-charts/PieChart";
-import "@/styles/graph.css";
-import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
-import { useRouter } from "next/navigation";
-import Loading from "@/components/loading";
 
-type SprayCount = {
+import React, { useState, useEffect } from "react";
+import { useSelectedRobot } from "@/app/contexts/SelectedRobotContext";
+import Loading from "@/components/loading";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
+import { Line, Bar } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
+
+interface SprayCount {
   date: string;
   water: number;
   fertilizer: number;
   pesticide: number;
-};
+}
 
-type UsageByType = {
+interface UsageByType {
   water: number;
   fertilizer: number;
   pesticide: number;
-};
-
-interface User {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  profileImage: string;
-  isAdmin: boolean;
 }
 
 export default function Graph() {
-  const router = useRouter();
   const { selectedRobot } = useSelectedRobot();
+  const [rangeFilter, setRangeFilter] = useState<"today" | "7days" | "30days">("7days");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sprayCounts, setSprayCounts] = useState<SprayCount[]>([]);
@@ -41,115 +54,20 @@ export default function Graph() {
     pesticide: 0,
   });
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [modalMessage, setModalMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/users/profile", {
-      method: "GET",
-      credentials: "include",
-    })
-      .then(async (res) => {
-        if (res.status === 403 || res.status === 401) {
-          setErrorMessage("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
-          router.replace("/");
-          return;
-        }
-        const data = await res.json();
-        setUser(data);
-      })
-      .catch((error) => {
-        setErrorMessage("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
-      });
-  }, [router]);
-
-  async function fetchSprayCounts() {
-    if (!selectedRobot || !startDate || !endDate) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/robot/usage-liquidType-Graph?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}&groupBy=day`,
-        {
-          method: 'GET',
-          credentials: 'include',
-        }
-      );
-
-      const contentType = res.headers.get("content-type");
-      const text = await res.text();
-
-      if (!res.ok || !contentType?.includes("application/json")) {
-        setSprayCounts([]);
-        throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
-      }
-
-      const data = JSON.parse(text);
-      if (data.success) setSprayCounts(data.data);
-      else setSprayCounts([]);
-    } catch (error) {
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-      }
-      setSprayCounts([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchUsageByType() {
-    if (!selectedRobot || !startDate || !endDate) return;
-    try {
-      const res = await fetch(`/robot/usage-liquidType?device_id=${encodeURIComponent(selectedRobot.device_id)}&startDate=${startDate}&endDate=${endDate}`,
-        {
-          method: 'GET',
-          credentials: 'include',
-        }
-      );
-
-      const contentType = res.headers.get("content-type");
-      const text = await res.text();
-
-      if (!res.ok || !contentType?.includes("application/json")) {
-        setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
-        throw new Error("ไม่พบข้อมูลของหุ่นยนต์ในวันที่เลือก");
-      }
-
-      const data = JSON.parse(text);
-      if (data.success) {
-        setUsageByType(data.totals);
-      } else {
-        setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-      }
-      setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
-    }
-
-  }
-
-  const showModal = (message: string) => {
-    setModalMessage(message);
-  };
-
-  const closeModal = () => {
-    setModalMessage(null);
-    setStartDate("");
-    setEndDate("");
-  };
 
   useEffect(() => {
     const now = new Date();
-    now.setHours(now.getHours() + 7);
-
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, "0");
     const dd = String(now.getDate()).padStart(2, "0");
     const todayStr = `${yyyy}-${mm}-${dd}`;
 
+    let daysToSubtract = 7;
+    if (rangeFilter === "today") daysToSubtract = 0;
+    if (rangeFilter === "30days") daysToSubtract = 30;
+
     const start = new Date(now);
-    start.setDate(start.getDate() - 7);
+    start.setDate(start.getDate() - daysToSubtract);
     const startY = start.getFullYear();
     const startM = String(start.getMonth() + 1).padStart(2, "0");
     const startD = String(start.getDate()).padStart(2, "0");
@@ -157,155 +75,206 @@ export default function Graph() {
 
     setStartDate(startStr);
     setEndDate(todayStr);
-  }, [selectedRobot]);
+  }, [rangeFilter, selectedRobot]);
 
   useEffect(() => {
-    fetchSprayCounts();
-    fetchUsageByType();
+    async function fetchData() {
+      if (!selectedRobot?.device_id || !startDate || !endDate) return;
+      setLoading(true);
+      try {
+        const [resGraph, resType] = await Promise.all([
+          fetch(
+            `/robot/usage-liquidType-Graph?device_id=${encodeURIComponent(
+              selectedRobot.device_id
+            )}&startDate=${startDate}&endDate=${endDate}&groupBy=day`,
+            { credentials: "include" }
+          ).then((r) => r.json()).catch(() => null),
+          fetch(
+            `/robot/usage-liquidType?device_id=${encodeURIComponent(
+              selectedRobot.device_id
+            )}&startDate=${startDate}&endDate=${endDate}`,
+            { credentials: "include" }
+          ).then((r) => r.json()).catch(() => null),
+        ]);
+
+        if (resGraph?.success && Array.isArray(resGraph.data)) {
+          setSprayCounts(resGraph.data);
+        } else {
+          setSprayCounts([]);
+        }
+
+        if (resType?.success && resType.totals) {
+          setUsageByType(resType.totals);
+        } else {
+          setUsageByType({ water: 0, fertilizer: 0, pesticide: 0 });
+        }
+      } catch (error) {
+        console.error("Graph fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
   }, [selectedRobot, startDate, endDate]);
 
-  useEffect(() => {
-    if (errorMessage) {
-      showModal(errorMessage);
-    } else {
-      setModalMessage(null);
-    }
-  }, [selectedRobot, errorMessage]);
+  const defaultLabels = ["01:01", "01:02", "01:03", "01:04", "01:05", "01:06", "01:07", "01:08", "01:09", "01:10"];
+  const batteryData = [99, 98, 96, 95, 94, 92, 90, 88, 87, 86];
+  const volumeData = [0.2, 0.6, 1.1, 1.6, 2.1, 2.6, 3.0, 3.4, 3.7, 3.98];
+  const waterLvlData = [98, 95, 93, 89, 86, 84, 80, 76, 72, 68];
 
-  const dates = sprayCounts.map((d) => d.date);
-  const waterSeries = sprayCounts.map((d) => d.water);
-  const fertilizerSeries = sprayCounts.map((d) => d.fertilizer);
-  const pesticideSeries = sprayCounts.map((d) => d.pesticide);
+  const battAvg = (batteryData.reduce((a, b) => a + b, 0) / batteryData.length).toFixed(1);
 
-  const pieData = [
-    { id: 0, value: usageByType.water, label: "น้ำ" },
-    { id: 1, value: usageByType.fertilizer, label: "ปุ๋ย" },
-    { id: 2, value: usageByType.pesticide, label: "สารเคมี" },
-  ];
+  const baseChartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index" as const, intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#1D2731",
+        borderColor: "#2A3440",
+        borderWidth: 1,
+        padding: 10,
+        titleColor: "#EAF0F5",
+        bodyColor: "#C4CDD6",
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: "rgba(255, 255, 255, 0.05)", drawTicks: false },
+        border: { display: false },
+        ticks: { color: "#8D9AAA" },
+      },
+      y: {
+        grid: { color: "rgba(255, 255, 255, 0.05)", drawTicks: false },
+        border: { display: false },
+        ticks: { color: "#8D9AAA" },
+      },
+    },
+  };
 
-  if (loading) {
+  const chartBattData = {
+    labels: defaultLabels,
+    datasets: [
+      {
+        data: batteryData,
+        borderColor: "#4ADE80",
+        backgroundColor: "rgba(74, 222, 128, 0.08)",
+        fill: true,
+        pointBorderColor: "#4ADE80",
+        tension: 0.3,
+      },
+    ],
+  };
+
+  const chartVolData = {
+    labels: defaultLabels,
+    datasets: [
+      {
+        data: volumeData,
+        backgroundColor: "#3FA9E6",
+        borderRadius: 3,
+        maxBarThickness: 22,
+      },
+    ],
+  };
+
+  const chartWaterLvlConfig = {
+    labels: defaultLabels,
+    datasets: [
+      {
+        data: waterLvlData,
+        borderColor: "#F0A93A",
+        backgroundColor: "rgba(240, 169, 58, 0.08)",
+        fill: true,
+        pointBorderColor: "#F0A93A",
+        tension: 0.3,
+      },
+    ],
+  };
+
+  if (loading && sprayCounts.length === 0) {
     return <Loading />;
   }
 
   return (
-    <main className="graph-dashboard">
-      <section className="graph-dashboard-content">
-        <div className="graph-header">
-          <h2 className="graph-title">ภาพรวมการใช้สารเคมี</h2>
-        </div>
-        {!selectedRobot ? (
-          <p>โปรดเลือกหุ่นยนต์จากเมนูด้านข้าง</p>
-        ) : (
-          <>
-            <div className="selected-robot-info">
-              <p>
-                หุ่นยนต์ที่เลือก:{" "}
-                {user?.isAdmin
-                  ? selectedRobot.device_id
-                  : selectedRobot.robot_name}
-              </p>
-            </div>
-            <div className="graph-main-content">
-              <section className="graph-left-panel">
-                <div className="graph-filters">
-                  <label className="graph-label">เลือกวันที่เริ่มต้น:</label>
-                  <input
-                    type="date"
-                    className="graph-date-picker"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                  <label className="graph-label">เลือกวันที่สิ้นสุด:</label>
-                  <input
-                    type="date"
-                    className="graph-date-picker"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="graph-main-chart">
-                  <div className="line-graph-chart">
-                    <LineChart
-                      series={[
-                        { data: waterSeries, label: "น้ำ" },
-                        { data: fertilizerSeries, label: "ปุ๋ย" },
-                        { data: pesticideSeries, label: "สารเคมี" },
-                      ]}
-                      xAxis={[{ scaleType: "point", data: dates }]}
-                    />
-                  </div>
-                  <div className="bar-graph-chart">
-                    <BarChart
-                      series={[
-                        { data: waterSeries, label: "น้ำ" },
-                        { data: fertilizerSeries, label: "ปุ๋ย" },
-                        { data: pesticideSeries, label: "สารเคมี" },
-                      ]}
-                      xAxis={[{ scaleType: "band", data: dates }]}
-                    />
-                  </div>
-                </div>
-              </section>
-
-              <section className="graph-right-panel">
-                <div className="graph-chemical-list">
-                  <div className="chemical-water-item">
-                    <p className="chemical-water-text">น้ำ</p>
-                    <p className="chemical-water-usage">{usageByType.water.toFixed(2)} L</p>
-                  </div>
-                  <div className="chemical-fertilizer-item">
-                    <p className="chemical-fertilizer-text">ปุ๋ย</p>
-                    <p className="chemical-fertilizer-usage">{usageByType.fertilizer.toFixed(2)} L</p>
-                  </div>
-                  <div className="chemical-hazardous-item">
-                    <p className="chemical-hazardous-text">สารเคมี</p>
-                    <p className="chemical-hazardous-usage">{usageByType.pesticide.toFixed(2)} L</p>
-                  </div>
-                </div>
-                <div className="graph-detail-box">
-                  <h3 className="graph-subtitle">ปริมาณการใช้ของเหลว</h3>
-                  {pieData.reduce((acc, d) => acc + d.value, 0) > 0 ? (
-                    <PieChart
-                      series={[
-                        {
-                          data: pieData,
-                          innerRadius: 30,
-                          outerRadius: 100,
-                          paddingAngle: 5,
-                          cornerRadius: 5,
-                          startAngle: -90,
-                          endAngle: 270,
-                        },
-                      ]}
-                      width={250}
-                      height={130}
-                    />
-                  ) : (
-                    <p>ไม่มีข้อมูลการใช้ของเหลว</p>
-                  )}
-                </div>
-              </section>
-            </div>
-          </>
-        )}
-      </section>
-      {modalMessage && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <button className="modal-close" onClick={closeModal}>×</button>
-            <div className="crossmark-animation">
-              <svg viewBox="0 0 52 52" className="crossmark">
-                <circle className="crossmark-circle" cx="26" cy="26" r="25" fill="none" />
-                <path className="crossmark-line1" d="M16 16 L36 36" />
-                <path className="crossmark-line2" d="M36 16 L16 36" />
-              </svg>
-            </div>
-            <p>{modalMessage}</p>
-            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+    <main className="content">
+      {/* Filter Bar */}
+      <div className="filter-bar">
+        <div className="seg-control">
+          <div
+            className={`seg-btn ${rangeFilter === "today" ? "active" : ""}`}
+            onClick={() => setRangeFilter("today")}
+          >
+            วันนี้
+          </div>
+          <div
+            className={`seg-btn ${rangeFilter === "7days" ? "active" : ""}`}
+            onClick={() => setRangeFilter("7days")}
+          >
+            7 วัน
+          </div>
+          <div
+            className={`seg-btn ${rangeFilter === "30days" ? "active" : ""}`}
+            onClick={() => setRangeFilter("30days")}
+          >
+            30 วัน
           </div>
         </div>
-      )}
+
+        <select className="select-field">
+          <option>{selectedRobot ? selectedRobot.robot_name : "Simulated Robo"}</option>
+        </select>
+
+        <select className="select-field">
+          <option>ทุกตัวชี้วัด</option>
+          <option>แบตเตอรี่</option>
+          <option>ปริมาณน้ำ</option>
+        </select>
+
+        <button className="btn secondary ghost" style={{ marginLeft: "auto" }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16" />
+          </svg>
+          ส่งออกข้อมูล
+        </button>
+      </div>
+
+      {/* Chart 1: Battery */}
+      <div className="panel chart-panel" style={{ marginBottom: "16px" }}>
+        <div className="section-head">
+          <div className="section-title">แบตเตอรี่ (%)</div>
+          <div className="section-sub num">ค่าเฉลี่ย {battAvg}%</div>
+        </div>
+        <div className="chart-box">
+          <Line data={chartBattData} options={baseChartOpts} />
+        </div>
+      </div>
+
+      {/* Chart 2 & 3: Volume & Water Level */}
+      <div className="grid-2col">
+        <div className="panel chart-panel">
+          <div className="section-head">
+            <div className="section-title">ปริมาณน้ำสะสม (ลิตร)</div>
+            <div className="section-sub">
+              น้ำ: {usageByType.water}L | ปุ๋ย: {usageByType.fertilizer}L | ยา: {usageByType.pesticide}L
+            </div>
+          </div>
+          <div className="chart-box" style={{ height: "220px" }}>
+            <Bar data={chartVolData} options={baseChartOpts} />
+          </div>
+        </div>
+
+        <div className="panel chart-panel">
+          <div className="section-head">
+            <div className="section-title">ระดับน้ำถัง (%)</div>
+          </div>
+          <div className="chart-box" style={{ height: "220px" }}>
+            <Line data={chartWaterLvlConfig} options={baseChartOpts} />
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

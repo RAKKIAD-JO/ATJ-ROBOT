@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Environment variables (CRITICAL: DO NOT COMMIT REAL KEYS)
+.env
+.env*.local
+.env.production
+.env.development
+backend/.env
+frontend/.env*
+
+# Next.js build output
+.next/
+**/build/
+**/dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db

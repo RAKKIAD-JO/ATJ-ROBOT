@@ -1,154 +1,127 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import "@/styles/token.css";
-import "@/styles/resetPassword.css";
 
 export default function AssignRobot() {
-    const router = useRouter();
-    const [robotToken, setRobotToken] = useState("");
-    const [robotName, setRobotName] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
-    const [modalMessage, setModalMessage] = useState<string | null>(null);
-    const [modalType, setModalType] = useState<"success" | "error">("success");
+  const router = useRouter();
+  const [robotToken, setRobotToken] = useState("");
+  const [robotName, setRobotName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-    const showModal = (message: string, type: "success" | "error" = "success") => {
-        setModalMessage(message);
-        setModalType(type);
-    };
+  const handleAssign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!robotToken || !robotName) {
+      setFeedback({ message: "กรุณากรอก Token และตั้งชื่อหุ่นยนต์ให้ครบถ้วน", type: "error" });
+      return;
+    }
 
-    const closeModal = () => {
-        setModalMessage(null);
-        if (modalType === "success") {
-            router.push("/home");
-        }
-    };
+    setLoading(true);
+    setFeedback(null);
 
-    useEffect(() => {
-        if (!window.location.search.includes('reloaded=1')) {
-            window.location.replace(window.location.pathname + '?reloaded=1');
-        }
-        fetch("/api/users/profile", {
-            credentials: "include"
-        })
-            .then(res => {
-                if (res.status === 403 || res.status === 401) {
-                    setErrorMessage('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-                    router.replace('/');
-                    return;
-                }
-                return res.json();
-            })
-            .catch((err) => {
-                setErrorMessage('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
-            });
-    }, [router]);
+    try {
+      const res = await fetch("/robot/connect-robot", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: robotToken,
+          robot_name: robotName,
+        }),
+      });
 
-    const handleAssign = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!robotToken || !robotName) {
-            showModal("กรุณากรอกข้อมูลให้ครบถ้วน", "error");
-            return;
-        }
+      const data = await res.json();
 
-        setLoading(true);
+      if (res.ok && data.success) {
+        setFeedback({ message: data.message || "เชื่อมต่อหุ่นยนต์สำเร็จ!", type: "success" });
+        setTimeout(() => {
+          router.push("/home");
+        }, 1200);
+      } else {
+        setFeedback({ message: data.message || "ไม่สามารถเชื่อมต่อหุ่นยนต์ได้", type: "error" });
+      }
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาด:", error);
+      setFeedback({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        try {
-            const res = await fetch("/robot/connect-robot", {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    "token": robotToken,
-                    "robot_name": robotName,
-                }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                showModal(data.message, "success");
-
-
-            } else {
-                showModal(data.message, "error");
-            }
-        } catch (error) {
-            console.error("เกิดข้อผิดพลาด:", error);
-            showModal("เกิดข้อผิดพลาดที่ไม่คาดคิด", "error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="reset-password-container">
-            <div className="crad-reset-password">
-                <div className="form-box-reset-password">
-                    <h2>Assign Robot</h2>
-                    {errorMessage && (
-                        <div className="error-message" style={{ color: "red", marginBottom: 12 }}>
-                            {errorMessage}
-                        </div>
-                    )}
-                    <form onSubmit={handleAssign}>
-                        <input
-                            type="text"
-                            placeholder="Robot Token"
-                            value={robotToken}
-                            onChange={(e) => setRobotToken(e.target.value)}
-                            required
-                        />
-                        <input
-                            type="text"
-                            placeholder="Robot Name"
-                            value={robotName}
-                            onChange={(e) => setRobotName(e.target.value)}
-                            maxLength={14}
-                            required
-                        />
-                        <button type="submit" disabled={loading}>
-                            {loading ? "กำลังบันทึก..." : "Assign Robot"}
-                        </button>
-                    </form>
-                    <p className="back-to-login" onClick={() => router.push("/home")}>
-                        Back to Home
-                    </p>
-                </div>
-                <div className="image-box">
-                    <h1>Welcome ATJ Robot</h1>
-                    <img src="/logomine1.png" alt="Robot" />
-                </div>
-            </div>
-            {modalMessage && (
-                <div className="modal-overlay">
-                    <div className="modal-box">
-                        <button className="modal-close" onClick={closeModal}>×</button>
-                        {modalType === "success" ? (
-                            <div className="checkmark-animation">
-                                <svg viewBox="0 0 52 52" className="checkmark">
-                                    <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
-                                    <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
-                                </svg>
-                            </div>
-                        ) : (
-                            <div className="crossmark-animation">
-                                <svg viewBox="0 0 52 52" className="crossmark">
-                                    <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
-                                    <path className="crossmark-line1" d="M16 16 L36 36" />
-                                    <path className="crossmark-line2" d="M36 16 L16 36" />
-                                </svg>
-                            </div>
-                        )}
-                        <p>{modalMessage}</p>
-                        <button className="modal-ok" onClick={closeModal}>ตกลง</button>
-                    </div>
-                </div>
-            )}
+  return (
+    <div className="w-full min-h-screen flex justify-center items-center p-4 bg-[var(--bg)]">
+      <div className="panel max-w-lg w-full p-8 shadow-2xl border border-[var(--border)] relative">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
+            <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="4" y="8" width="16" height="12" rx="2" />
+              <path d="M12 8V4M9 4h6" />
+              <circle cx="9" cy="14" r="1" fill="currentColor" />
+              <circle cx="15" cy="14" r="1" fill="currentColor" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-[var(--text-hi)]">Assign Robot (เพิ่มหุ่นยนต์)</h2>
+            <p className="text-xs text-[var(--text-low)]">เชื่อมต่อหุ่นยนต์ตัวใหม่เข้ากับบัญชีของคุณ</p>
+          </div>
         </div>
-    );
+
+        <form onSubmit={handleAssign} className="flex flex-col gap-4">
+          <div className="field">
+            <label>Robot Token</label>
+            <input
+              type="text"
+              placeholder="กรอก Token ของหุ่นยนต์"
+              value={robotToken}
+              onChange={(e) => setRobotToken(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="field">
+            <label>Robot Name (ชื่อหุ่นยนต์)</label>
+            <input
+              type="text"
+              placeholder="ตั้งชื่อหุ่นยนต์ เช่น Simulated Robo"
+              value={robotName}
+              onChange={(e) => setRobotName(e.target.value)}
+              maxLength={20}
+              required
+            />
+          </div>
+
+          {feedback && (
+            <div
+              className={`p-3 rounded-lg text-xs font-semibold flex items-center gap-2 ${
+                feedback.type === "success"
+                  ? "bg-[var(--good-soft)] text-[var(--good)]"
+                  : "bg-[var(--danger-soft)] text-[var(--danger)]"
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">
+                {feedback.type === "success" ? "check_circle" : "error"}
+              </span>
+              <span>{feedback.message}</span>
+            </div>
+          )}
+
+          <div className="form-actions mt-2">
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => router.push("/home")}
+            >
+              กลับหน้าหลัก
+            </button>
+            <button type="submit" disabled={loading} className="btn">
+              {loading ? "กำลังเชื่อมต่อ..." : "Assign Robot"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }

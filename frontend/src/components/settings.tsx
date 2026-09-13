@@ -1,310 +1,309 @@
-'use client';
-import React, { useEffect, useRef, useState } from 'react';
-import "@/styles/settings.css";
-import { useRouter } from 'next/navigation';
+"use client";
 
+import { useEffect, useState } from "react";
+import { useTheme } from "@/app/contexts/ThemeContext";
 
-export default function SettingsPage() {
-  const imgRef = useRef<HTMLImageElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [profileImage, setProfileImage] = useState('/avatar.jpg');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [profileFullName, setProfileFullName] = useState('');
-  const [profilePhone, setProfilePhone] = useState('');
-  const [profileEmail, setProfileEmail] = useState('');
-  const [profileImagePath, setProfileImagePath] = useState<File | null>(null);
-  const router = useRouter();
+interface UserProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  farmName: string;
+  role: string;
+  profileImage: string;
+  isAdmin: boolean;
+}
 
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [modalMessage, setModalMessage] = useState<string | null>(null);
-  const [modalType, setModalType] = useState<"success" | "error">("success");
+export default function Settings() {
+  const { theme, toggleTheme } = useTheme();
+  const [profile, setProfile] = useState<UserProfile>({
+    firstName: "รักเกียรติ",
+    lastName: "โพธิ์ศรี",
+    email: "rakkiat.p@atjfarm.co.th",
+    phone: "081-234-5678",
+    farmName: "ฟาร์มข้าวโพด ริมห้วย",
+    role: "ผู้ดูแลระบบฟาร์ม",
+    profileImage: "",
+    isAdmin: false,
+  });
+  const [lowBatteryAlert, setLowBatteryAlert] = useState(true);
+  const [lowWaterAlert, setLowWaterAlert] = useState(true);
+  const [dailyReportAlert, setDailyReportAlert] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<{ message: string; isError?: boolean } | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     fetch("/api/users/profile", {
-      credentials: "include"
+      method: "GET",
+      credentials: "include",
     })
-      .then(res => {
-        if (res.status === 403 || res.status === 401) {
-          setErrorMessage('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-          router.replace('/');
-          return;
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.email) {
+          setProfile((prev) => ({
+            ...prev,
+            firstName: data.firstName || prev.firstName,
+            lastName: data.lastName || prev.lastName,
+            email: data.email || prev.email,
+            phone: data.phone || prev.phone,
+            farmName: data.farmName || prev.farmName,
+            role: data.isAdmin ? "ผู้ดูแลระบบฟาร์ม" : "เกษตรกร",
+            profileImage: data.profileImage || "",
+            isAdmin: data.isAdmin || false,
+          }));
         }
-        return res.json();
       })
-      .then(user => {
-        if (!user) return;
-        setProfileFullName(
-          [user.firstName, user.lastName].filter(Boolean).join(" ")
-        );
-        setProfilePhone(user.phone || "");
-        setProfileEmail(user.email || "");
-        setProfileImage(user.profileImage || "/avatar.jpg");
-        setEmail(user.email || "");
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const savedAlerts = localStorage.getItem("atj_alert_settings");
+    if (savedAlerts) {
+      try {
+        const parsed = JSON.parse(savedAlerts);
+        if (typeof parsed.lowBattery === "boolean") setLowBatteryAlert(parsed.lowBattery);
+        if (typeof parsed.lowWater === "boolean") setLowWaterAlert(parsed.lowWater);
+        if (typeof parsed.dailyReport === "boolean") setDailyReportAlert(parsed.dailyReport);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const handleSave = () => {
+    localStorage.setItem(
+      "atj_alert_settings",
+      JSON.stringify({
+        lowBattery: lowBatteryAlert,
+        lowWater: lowWaterAlert,
+        dailyReport: dailyReportAlert,
       })
-      .catch((err) => {
-        setErrorMessage('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
-      });
-  }, [router]);
-
-  const showModal = (message: string, type: "success" | "error" = "success") => {
-    setModalMessage(message);
-    setModalType(type);
+    );
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const closeModal = () => {
-    setModalMessage(null);
-    window.location.reload();
-  };
-
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-
-      if (!file.type.startsWith("image/")) {
-        showModal("กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น", 'error');
-        return;
-      }
-
-      const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
-      const fileExtension = file.name.split(".").pop()?.toLowerCase();
-      if (!allowedExtensions.includes(fileExtension || "")) {
-        showModal("รองรับเฉพาะไฟล์: .jpg, .jpeg, .png, .gif, .webp");
-        return;
-      }
-      if (file.size > 2 * (1024 * 1024)) {
-        showModal("รูปห้ามใหญ่เกิน 2MB", 'error');
-        return;
-      }
-
-      setProfileImagePath(file);
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSaveChanges = async () => {
-    if (newPassword && newPassword.length < 8) {
-      setErrorMessage('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
-      return;
-    }
-
-    if (newPassword && newPassword !== confirmPassword) {
-      setErrorMessage('รหัสผ่านใหม่และรหัสผ่านยืนยันไม่ตรงกัน');
-      return;
-    }
-
-    if (phone && phone.length !== 10) {
-      setErrorMessage('กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก');
-      return;
-    }
-
+  const handleTestEmail = async () => {
+    setSendingEmail(true);
+    setEmailStatus({ message: `กำลังส่งอีเมลทดสอบไปยัง ${profile.email}...` });
     try {
-      const formData = new FormData();
-
-
-      if (fullName.trim() !== profileFullName.trim() && fullName.trim() !== "") {
-        formData.append('fullName', fullName.trim());
-      }
-      if (phone.trim() !== profilePhone.trim() && phone.trim() !== "") {
-        formData.append('phone', phone.trim());
-      }
-      if (newPassword) {
-        formData.append('newPassword', newPassword);
-      }
-
-      if (profileImagePath) {
-        formData.append('profileImage', profileImagePath);
-      }
-
-      if ([...formData.keys()].length === 0) {
-        setErrorMessage('กรุณากรอกข้อมูลที่ต้องการเปลี่ยน');
-        return;
-      }
-
-      const response = await fetch('/api/users/profile', {
-        method: 'PUT',
-        credentials: 'include',
-        body: formData
+      const res = await fetch("/api/users/send-test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: profile.email }),
       });
-
-      if (response.status === 403) {
-        setErrorMessage('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-        return;
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEmailStatus({ message: data.message || `✓ ส่งอีเมลทดสอบสำเร็จไปยัง ${profile.email}` });
+      } else {
+        setEmailStatus({ message: data.error || "เกิดข้อผิดพลาดในการส่งอีเมล", isError: true });
       }
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      setErrorMessage('');
-      showModal('อัปเดตข้อมูลสำเร็จ');
-
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setErrorMessage('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
-      router.replace('/settings');
+    } catch (e) {
+      console.error(e);
+      setEmailStatus({ message: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อส่งอีเมลได้", isError: true });
+    } finally {
+      setSendingEmail(false);
     }
   };
 
-  const today = new Date().toLocaleDateString("th-TH", {
-    weekday: "short",
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  });
+  const initials = profile.firstName ? profile.firstName.substring(0, 2) : "รศ";
 
   return (
-    <main className="main-setting">
-      <div className="header-setting">
-        <h2>ตั้งค่าข้อมูลส่วนตัว</h2>
-        <p>{today}</p>
-      </div>
-
-      <div className="card-setting">
-        <div className="left-section">
-          <img
-            ref={imgRef}
-            src={
-              profileImage?.startsWith('data:') || profileImage?.startsWith('blob:')
-                ? profileImage
-                : profileImage?.startsWith('/uploads/profile_Image')
-                  ? `${profileImage}`
-                  : '/avatar.jpg'
-            }
-            alt="Profile"
-            className="profile-img"
-          />
-          <h4>{profileFullName || 'ชื่อของคุณ'}</h4>
-          <p>อีเมล: {profileEmail}</p>
-          <p>เบอร์โทร: {profilePhone || 'ยังไม่ได้กรอกเบอร์โทร'}</p>
-        </div>
-
-        <div className="right-section">
-          <button
-            className="upload-button"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            อัพโหลดรูปภาพ
+    <main className="content">
+      <div className="profile-grid">
+        {/* Left Profile Summary Card */}
+        <div className="panel profile-card">
+          <div className="profile-avatar">{initials}</div>
+          <div className="profile-name">
+            {profile.firstName} {profile.lastName}
+          </div>
+          <div className="profile-role">{profile.role}</div>
+          <button className="btn secondary" style={{ width: "100%", justifyContent: "center" }}>
+            เปลี่ยนรูปโปรไฟล์
           </button>
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleUpload}
-            style={{ display: 'none' }}
-          />
-          <div className="error">
-          {errorMessage && <p className="error-message">{errorMessage}</p>}
+          <div className="divider"></div>
+          <div className="info-row">
+            <span className="k">หุ่นยนต์ในความดูแล</span>
+            <span className="v">2 เครื่อง</span>
           </div>
-          <div className="form-group">
-            <div className="column">
-              <label>ชื่อ-นามสกุล</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="ชื่อ-นามสกุลของคุณ"
-              />
-            </div>
-            <div className="column">
-              <label>เบอร์โทร</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '');
-                  if (value.length <= 10) setPhone(value);
-                }}
-                placeholder="เบอร์โทรศัพท์ของคุณ"
-                maxLength={10}
-              />
-            </div>
-
-            <div className="column">
-              <label>รหัสผ่านใหม่</label>
-              <div className="password-wrapper">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="รหัสผ่านใหม่ของคุณ"
-                />
-                <span
-                  className="material-symbols-outlined toggle-icon"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                >
-                  {showNewPassword ? "visibility " : "visibility_off"}
-                </span>
-              </div>
-            </div>
-
-            <div className="column">
-              <label>ยืนยันรหัสผ่าน</label>
-              <div className="password-wrapper">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="ยืนยันรหัสผ่านใหม่ของคุณ"
-                />
-                <span
-                  className="material-symbols-outlined toggle-icon"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? "visibility" : "visibility_off"}
-                </span>
-              </div>
-            </div>
-
-            <div className="column">
-              <label>Email</label>
-              <input
-                type="email"
-                value={email}
-                readOnly
-                placeholder={email}
-                style={{ backgroundColor: "#f5f5f5", cursor: "not-allowed" }}
-              />
-            </div>
+          <div className="info-row">
+            <span className="k">เข้าสู่ระบบล่าสุด</span>
+            <span className="v num">13/09/2569 00:52</span>
           </div>
-          <button className="save-button" onClick={handleSaveChanges}>บันทึก</button>
         </div>
-      </div>
-      {modalMessage && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <button className="modal-close" onClick={closeModal}>×</button>
-            {modalType === "success" ? (
-              <div className="checkmark-animation">
-                <svg viewBox="0 0 52 52" className="checkmark">
-                  <circle className="checkmark-circle-ok" cx="26" cy="26" r="25" fill="none" />
-                  <path className="checkmark-check-ok" fill="none" d="M14 27l7 7 16-16" />
-                </svg>
+
+        {/* Right Form Section */}
+        <div>
+          {/* Section 1: Personal Details */}
+          <div className="panel form-section" style={{ marginBottom: "16px" }}>
+            <div className="section-title" style={{ marginBottom: "16px" }}>
+              ข้อมูลส่วนตัว
+            </div>
+            <div className="form-row">
+              <div className="field">
+                <label>ชื่อ - นามสกุล</label>
+                <input
+                  type="text"
+                  value={`${profile.firstName} ${profile.lastName}`}
+                  onChange={(e) => {
+                    const parts = e.target.value.split(" ");
+                    setProfile({ ...profile, firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "" });
+                  }}
+                />
               </div>
-            ) : (
-              <div className="crossmark-animation">
-                <svg viewBox="0 0 52 52" className="crossmark">
-                  <circle className="crossmark-circle-error" cx="26" cy="26" r="25" fill="none" />
-                  <path className="crossmark-line1" d="M16 16 L36 36" />
-                  <path className="crossmark-line2" d="M36 16 L16 36" />
-                </svg>
+              <div className="field">
+                <label>ตำแหน่ง</label>
+                <input
+                  type="text"
+                  value={profile.role}
+                  onChange={(e) => setProfile({ ...profile, role: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="field">
+                <label>อีเมล</label>
+                <input
+                  type="email"
+                  value={profile.email}
+                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>เบอร์โทรศัพท์</label>
+                <input
+                  type="tel"
+                  value={profile.phone}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="field">
+                <label>ชื่อฟาร์ม / หน่วยงาน</label>
+                <input
+                  type="text"
+                  value={profile.farmName}
+                  onChange={(e) => setProfile({ ...profile, farmName: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>เขตเวลา</label>
+                <select>
+                  <option>(GMT+7) กรุงเทพฯ</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Appearance & Notifications */}
+          <div className="panel form-section">
+            <div className="section-title" style={{ marginBottom: "4px" }}>
+              การแสดงผลและแจ้งเตือน
+            </div>
+            <div className="section-sub" style={{ marginBottom: "12px" }}>
+              ปรับแต่งธีมการแสดงผลและเลือกช่องทางรับการแจ้งเตือน
+            </div>
+
+            {/* Dark / Light Theme Switch */}
+            <div className="switch-row">
+              <div className="switch-copy">
+                <div className="sr-title">โหมดการแสดงผล (Theme)</div>
+                <div className="sr-sub">
+                  {theme === "dark" ? "โหมดมืด (Dark Mode) สบายตาในที่มืด" : "โหมดสว่าง (Light Mode) สำหรับใช้งานกลางแจ้ง"}
+                </div>
+              </div>
+              <div
+                className={`switch ${theme === "dark" ? "on" : ""}`}
+                onClick={toggleTheme}
+                title="สลับโหมดมืด/สว่าง"
+              ></div>
+            </div>
+
+            {/* Switch 1: Low Battery */}
+            <div className="switch-row">
+              <div className="switch-copy">
+                <div className="sr-title">แจ้งเตือนแบตเตอรี่ต่ำ</div>
+                <div className="sr-sub">แจ้งเมื่อแบตเตอรี่ต่ำกว่า 20%</div>
+              </div>
+              <div
+                className={`switch ${lowBatteryAlert ? "on" : ""}`}
+                onClick={() => setLowBatteryAlert(!lowBatteryAlert)}
+              ></div>
+            </div>
+
+            {/* Switch 2: Low Water */}
+            <div className="switch-row">
+              <div className="switch-copy">
+                <div className="sr-title">แจ้งเตือนน้ำใกล้หมด</div>
+                <div className="sr-sub">แจ้งเมื่อระดับน้ำต่ำกว่า 15%</div>
+              </div>
+              <div
+                className={`switch ${lowWaterAlert ? "on" : ""}`}
+                onClick={() => setLowWaterAlert(!lowWaterAlert)}
+              ></div>
+            </div>
+
+            {/* Switch 3: Daily Summary */}
+            <div className="switch-row">
+              <div className="switch-copy">
+                <div className="sr-title">สรุปผลประจำวันทางอีเมล</div>
+                <div className="sr-sub">ส่งสรุปการทำงานทุกวันเวลา 18:00 ไปยัง {profile.email}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="btn ghost text-xs py-1 px-2.5"
+                  onClick={handleTestEmail}
+                  disabled={sendingEmail}
+                  title="ทดสอบส่งอีเมลรายงานเข้าอีเมลนี้ตอนนี้"
+                >
+                  {sendingEmail ? "กำลังส่ง..." : "ทดสอบส่งอีเมล"}
+                </button>
+                <div
+                  className={`switch ${dailyReportAlert ? "on" : ""}`}
+                  onClick={() => setDailyReportAlert(!dailyReportAlert)}
+                ></div>
+              </div>
+            </div>
+
+            {emailStatus && (
+              <div
+                className={`mt-3 p-3 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 ${
+                  emailStatus.isError
+                    ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                    : "bg-[var(--good-soft)] text-[var(--good)]"
+                }`}
+              >
+                <span>{emailStatus.message}</span>
+                <button
+                  type="button"
+                  className="text-xs opacity-75 hover:opacity-100"
+                  onClick={() => setEmailStatus(null)}
+                >
+                  ✕
+                </button>
               </div>
             )}
-            <p>{modalMessage}</p>
-            <button className="modal-ok" onClick={closeModal}>ตกลง</button>
+
+            {saveSuccess && (
+              <div className="mt-4 p-3 rounded-lg bg-[var(--good-soft)] text-[var(--good)] text-xs font-semibold">
+                ✓ บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button className="btn secondary">ยกเลิก</button>
+              <button className="btn" onClick={handleSave}>
+                บันทึกการเปลี่ยนแปลง
+              </button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </main>
   );
 }

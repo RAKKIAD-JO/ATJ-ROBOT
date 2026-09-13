@@ -40,6 +40,18 @@ export const SelectedRobotProvider = ({ children }: { children: ReactNode }) => 
   if (cookieToken) {
     setToken(cookieToken);
   }
+
+  fetch('/robot/my_robot', {
+    method: "GET",
+    credentials: "include"
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && Array.isArray(data.robots) && data.robots.length > 0) {
+        setSelectedRobot(prev => prev || data.robots[0]);
+      }
+    })
+    .catch(() => {});
   }, []);
 
   return (

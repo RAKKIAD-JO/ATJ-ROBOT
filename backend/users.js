@@ -417,5 +417,88 @@ router.post("/logout", (req, res) => {
   res.json({ message: "ออกจากระบบสำเร็จ" });
 });
 
+// Test Send Email Route
+router.post("/send-test-email", async (req, res) => {
+  const { email } = req.body;
+  const targetEmail = email || "rakkiadphosi@gmail.com";
+
+  try {
+    let fromEmail = `${process.env.RESEND_FROM_NAME} <${process.env.RESEND_FROM_EMAIL}>`;
+    let emailResult = await resendreg.emails.send({
+      from: fromEmail,
+      to: targetEmail,
+      subject: "📊 [ATJ Robot] รายงานสรุปผลประจำวันการทำงานหุ่นยนต์",
+      html: `
+        <div style="font-family: 'Kanit', sans-serif; background: #0e1319; color: #eaf0f5; padding: 30px;">
+          <div style="max-width: 600px; background: #161d25; padding: 25px; margin: auto; border-radius: 12px; border: 1px solid #2a3440;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="color: #25c2b8; margin: 0 0 8px 0;">🤖 ATJ Robot Daily Report</h2>
+              <p style="color: #9cacbb; font-size: 14px; margin: 0;">สรุปผลการทำงานหุ่นยนต์ประจำวันที่ ${new Date().toLocaleDateString('th-TH')}</p>
+            </div>
+            
+            <div style="background: #1c242e; padding: 18px; border-radius: 8px; margin-bottom: 15px;">
+              <h4 style="margin: 0 0 12px 0; color: #eaf0f5; font-size: 15px;">📌 สรุปสถานะการปฏิบัติงาน</h4>
+              <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• หุ่นยนต์ที่ทำงาน: <strong style="color: #eaf0f5;">Simulated Robo (ATJ001)</strong></p>
+              <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• พื้นที่ฉีดพ่น: <strong style="color: #eaf0f5;">แปลง B2 (ริมห้วย) - ข้าวโพด</strong></p>
+              <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• ปริมาณน้ำ/สารเคมีที่ใช้: <strong style="color: #4ade80;">18.20 ลิตร</strong></p>
+              <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• แบตเตอรี่คงเหลือ: <strong style="color: #4ade80;">86%</strong></p>
+              <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• ผลการทำงาน: <span style="color: #4ade80; font-weight: bold;">เสร็จสมบูรณ์ (100%)</span></p>
+            </div>
+
+            <p style="font-size: 12px; color: #5e6c7a; text-align: center; margin-top: 20px;">
+              อีเมลนี้เป็นอีเมลทดสอบระบบการส่งรายงานอัตโนมัติจาก ATJ Robot FLEET CONTROL
+            </p>
+          </div>
+        </div>
+      `,
+    });
+
+    if (emailResult.error) {
+      // If domain is unverified, fallback to onboarding@resend.dev for testing
+      emailResult = await resendreg.emails.send({
+        from: "onboarding@resend.dev",
+        to: targetEmail,
+        subject: "📊 [ATJ Robot] รายงานสรุปผลประจำวันการทำงานหุ่นยนต์",
+        html: `
+          <div style="font-family: 'Kanit', sans-serif; background: #0e1319; color: #eaf0f5; padding: 30px;">
+            <div style="max-width: 600px; background: #161d25; padding: 25px; margin: auto; border-radius: 12px; border: 1px solid #2a3440;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #25c2b8; margin: 0 0 8px 0;">🤖 ATJ Robot Daily Report</h2>
+                <p style="color: #9cacbb; font-size: 14px; margin: 0;">สรุปผลการทำงานหุ่นยนต์ประจำวันที่ ${new Date().toLocaleDateString('th-TH')}</p>
+              </div>
+              
+              <div style="background: #1c242e; padding: 18px; border-radius: 8px; margin-bottom: 15px;">
+                <h4 style="margin: 0 0 12px 0; color: #eaf0f5; font-size: 15px;">📌 สรุปสถานะการปฏิบัติงาน</h4>
+                <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• หุ่นยนต์ที่ทำงาน: <strong style="color: #eaf0f5;">Simulated Robo (ATJ001)</strong></p>
+                <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• พื้นที่ฉีดพ่น: <strong style="color: #eaf0f5;">แปลง B2 (ริมห้วย) - ข้าวโพด</strong></p>
+                <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• ปริมาณน้ำ/สารเคมีที่ใช้: <strong style="color: #4ade80;">18.20 ลิตร</strong></p>
+                <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• แบตเตอรี่คงเหลือ: <strong style="color: #4ade80;">86%</strong></p>
+                <p style="margin: 6px 0; font-size: 14px; color: #9cacbb;">• ผลการทำงาน: <span style="color: #4ade80; font-weight: bold;">เสร็จสมบูรณ์ (100%)</span></p>
+              </div>
+
+              <p style="font-size: 12px; color: #5e6c7a; text-align: center; margin-top: 20px;">
+                อีเมลนี้เป็นอีเมลทดสอบระบบการส่งรายงานอัตโนมัติจาก ATJ Robot FLEET CONTROL
+              </p>
+            </div>
+          </div>
+        `,
+      });
+    }
+
+    if (emailResult.error) {
+      return res.status(400).json({
+        success: false,
+        error: emailResult.error.message || "ไม่สามารถส่งอีเมลได้",
+        details: emailResult.error,
+      });
+    }
+
+    return res.json({ success: true, message: `ส่งอีเมลทดสอบเรียบร้อยแล้วไปยัง ${targetEmail}`, emailResult });
+  } catch (error) {
+    console.error("SEND TEST EMAIL ERROR:", error);
+    return res.status(500).json({ success: false, error: error.message || "เกิดข้อผิดพลาดในการส่งอีเมล" });
+  }
+});
+
 router.use('/uploads/profile_Image', express.static(path.join(__dirname, 'uploads/profile_Image')));
 module.exports = router;

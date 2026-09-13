@@ -1,4 +1,4 @@
-import"@/styles/layout.css"
+import "@/app/globals.css"
 import { Kanit } from 'next/font/google'
 import ClientLayout from "@/components/clientLayout";
 

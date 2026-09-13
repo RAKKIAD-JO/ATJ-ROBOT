@@ -1,37 +1,13 @@
-"use client"
-import Link from "next/link"
-import { usePathname, useRouter} from "next/navigation"
-import { useEffect,useRef,useState} from "react"
-import "@/styles/sidebar.css"
-import { useSelectedRobot} from "@/app/contexts/SelectedRobotContext";
+"use client";
 
-interface RobotType {
-    robot_id: number;
-    robot_name: string;
-    device_id: string;    
-};
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const robotPopupRef = useRef<HTMLDivElement>(null);
-    const router = useRouter();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [showRobots, setShowRobots] = useState(false);
-    const [user, setUser] = useState<{ name?: string; isAdmin?: boolean } | null>(null);
-    const [robots, setRobots] = useState<RobotType[]>([]);
-    const [loadingRobots, setLoadingRobots] = useState(false);
-    const [hasFetched, setHasFetched] = useState(false);
-    const { setSelectedRobot } = useSelectedRobot();
-    const [profileImage, setProfileImage] = useState<string>("/avatar.jpg");
-    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-    const toggleRobots = () => {
-        const next = !showRobots;
-        setShowRobots(next);
-        if (next) {
-            setHasFetched(false);
-        }
-    }
-    
+    const [user, setUser] = useState<{ name?: string; initials?: string; isAdmin?: boolean } | null>(null);
+
     useEffect(() => {
         fetch("/api/users/profile", {
             method: 'GET',
@@ -41,90 +17,31 @@ export default function Sidebar() {
             if (!res.ok) throw new Error("ไม่สามารถดึงข้อมูลผู้ใช้");
             return res.json();
         })
-        .then(user => {
+        .then(userData => {
+            const firstName = userData.firstName || "";
+            const lastName = userData.lastName || "";
+            const fullName = `${firstName} ${lastName}`.trim() || "ผู้ดูแลระบบ";
+            
+            // Generate initials
+            let initials = "รศ";
+            if (firstName) {
+                initials = firstName.substring(0, 2);
+            }
+
             setUser({
-                name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-                isAdmin: user.isAdmin || false,
+                name: fullName,
+                initials,
+                isAdmin: userData.isAdmin || false,
             });
-            setProfileImage(user.profileImage || "/avatar.jpg");
         })
         .catch(() => {
-            setUser(null);
-            setProfileImage("/avatar.jpg");
+            setUser({
+                name: "รักเกียรติ โพธิ์ศรี",
+                initials: "รศ",
+                isAdmin: false,
+            });
         });
     }, []);
-
-    useEffect(() => {
-        const controller = new AbortController();
-
-        const fetchRobots = async () => {
-            if (!user || !showRobots || hasFetched) return;
-
-            setLoadingRobots(true);
-            try {
-                const res = await fetch('/robot/my_robot', {
-                    method: "GET",
-                    credentials: "include"
-                });
-
-                const data = await res.json();
-                if (Array.isArray(data.robots)) {
-                    setRobots(data.robots);
-
-                } else {
-                    setRobots([]);
-                }
-                setHasFetched(true);
-            } catch (error) {
-                if (
-                  typeof error === "object" &&
-                  error &&
-                  "name" in error &&
-                  typeof (error as { name?: unknown }).name === "string" &&
-                  (error as { name?: string }).name !== "AbortError"
-                )
-                setRobots([]);
-            } finally {
-                setLoadingRobots(false);
-            }
-        };
-
-        fetchRobots();
-        return () => controller.abort();
-
-    }, [user, showRobots, hasFetched]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                showRobots &&
-                robotPopupRef.current &&
-                !robotPopupRef.current.contains(event.target as Node)
-            ) {
-                setShowRobots(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [showRobots]);
-
-    const goToTokenPage = (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
-        router.push("/token");
-    }
-
-    const handleSelectRobot = (robot: RobotType) => {
-        setSelectedRobot({
-            robot_id: robot.robot_id,
-            robot_name: robot.robot_name,
-            device_id: robot.device_id,
-        });
-        setIsSidebarOpen(false);
-        router.push('/home'); 
-    };
 
     const handleLogout = async () => {
         await fetch("/api/users/logout", {
@@ -135,110 +52,131 @@ export default function Sidebar() {
         window.location.href = "/";
     };
 
+    const closeNav = () => {
+        const appEl = document.getElementById("app");
+        if (appEl) {
+            appEl.classList.remove("nav-open");
+        }
+    };
+
     return (
-        <div className="container">
-            <div className={`menu-icon ${isSidebarOpen ? "active" : ""}`} onClick={toggleSidebar}>
-                <span className="material-symbols-outlined">menu</span>
+        <aside className="sidebar" id="sidebar">
+            <div className="sidebar-brand">
+                <div className="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="8" width="16" height="12" rx="2" strokeWidth="1.8" />
+                        <path d="M12 8V4M9 4h6" strokeWidth="1.8" />
+                        <circle cx="9" cy="14" r="1.1" fill="#04231F" stroke="none" />
+                        <circle cx="15" cy="14" r="1.1" fill="#04231F" stroke="none" />
+                    </svg>
+                </div>
+                <div className="brand-text">
+                    ATJ <span>Robot</span>
+                    <small>FLEET CONTROL</small>
+                </div>
             </div>
 
-            <aside className={isSidebarOpen ? "active" : ""}>
-                <div className="top">
-                    <div className="logo">
-                        <img src="/logomine1.png" alt="ATJ Robot Logo" />
-                        <h2>ATJ <span className="danger">Robot</span></h2>
+            <nav className="sidebar-nav">
+                <Link
+                    href="/home"
+                    onClick={closeNav}
+                    className={`nav-item ${pathname === "/home" ? "active" : ""}`}
+                >
+                    <svg viewBox="0 0 24 24">
+                        <rect x="3.2" y="3.2" width="7.4" height="7.4" rx="1.4" />
+                        <rect x="13.4" y="3.2" width="7.4" height="7.4" rx="1.4" />
+                        <rect x="3.2" y="13.4" width="7.4" height="7.4" rx="1.4" />
+                        <rect x="13.4" y="13.4" width="7.4" height="7.4" rx="1.4" />
+                    </svg>
+                    Dashboard
+                </Link>
+
+                <Link
+                    href="/graph"
+                    onClick={closeNav}
+                    className={`nav-item ${pathname === "/graph" ? "active" : ""}`}
+                >
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 3v16a2 2 0 002 2h16" />
+                        <path d="M7 15l3.5-4.5 3 3L19 6" />
+                    </svg>
+                    แสดงกราฟ
+                </Link>
+
+                <Link
+                    href="/history"
+                    onClick={closeNav}
+                    className={`nav-item ${pathname === "/history" ? "active" : ""}`}
+                >
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="8.6" />
+                        <path d="M12 7.5V12l3 2.2" />
+                    </svg>
+                    ประวัติการทำงาน
+                </Link>
+
+                <div className="nav-section-label">ระบบ</div>
+
+                <Link
+                    href="/settings"
+                    onClick={closeNav}
+                    className={`nav-item ${pathname === "/settings" ? "active" : ""}`}
+                >
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="2.8" />
+                        <path d="M19.4 14.6a1.6 1.6 0 00.3 1.8l.1.1a1.9 1.9 0 11-2.7 2.7v-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a1.9 1.9 0 11-3.8 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a1.9 1.9 0 0 1-2.7-2.7l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a1.9 1.9 0 110-3.8h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1A1.9 1.9 0 117.6 4.5l.1.1a1.6 1.6 0 001.8.3H9.6a1.6 1.6 0 001-1.5V3a1.9 1.9 0 113.8 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a1.9 1.9 0 112.7 2.7l-.1.1a1.6 1.6 0 00-.3 1.8v.1a1.6 1.6 0 001.5 1H21a1.9 1.9 0 110 3.8h-.1a1.6 1.6 0 00-1.5 1z" />
+                    </svg>
+                    ตั้งค่าโปรไฟล์
+                </Link>
+
+                <Link
+                    href="/robotState"
+                    onClick={closeNav}
+                    className={`nav-item ${pathname === "/robotState" ? "active" : ""}`}
+                >
+                    <svg viewBox="0 0 24 24">
+                        <rect x="4" y="8" width="16" height="12" rx="2" />
+                        <path d="M12 8V4M9 4h6" />
+                        <circle cx="9" cy="14" r="1.1" />
+                        <circle cx="15" cy="14" r="1.1" />
+                        <path d="M8 18h8" />
+                    </svg>
+                    หุ่นยนต์ของฉัน
+                    <div className="add-btn">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
+                            <path d="M12 5v14M5 12h14" />
+                        </svg>
                     </div>
-                    <div className="close" onClick={toggleSidebar}>
-                        <span className="material-symbols-outlined">close</span>
-                    </div>
+                </Link>
+
+                {user?.isAdmin && (
+                    <Link
+                        href="/admin"
+                        onClick={closeNav}
+                        className={`nav-item ${pathname === "/admin" ? "active" : ""}`}
+                    >
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
+                        </svg>
+                        จัดการ Token
+                    </Link>
+                )}
+            </nav>
+
+            <div className="sidebar-footer">
+                <div className="avatar">{user?.initials || "รศ"}</div>
+                <div className="footer-user">
+                    <div className="fu-name">{user?.name || "รักเกียรติ โพธิ์ศรี"}</div>
+                    <div className="fu-role">{user?.isAdmin ? "ผู้ดูแลระบบฟาร์ม" : "เกษตรกร"}</div>
                 </div>
-
-                <div className="sidebar">
-                    {user?.isAdmin && (
-                    <Link href="/admin" className={pathname === "/admin" ? "active" : ""}>
-                        <span className="material-symbols-outlined">admin_panel_settings</span>
-                        <div className="tooltip">จัดการ Token</div>
-                        <h3>จัดการ Token</h3>
-                    </Link>
-                    )}
-                    <Link href="/home" className={pathname === "/home" ? "active" : ""}>
-                        <span className="material-symbols-outlined">grid_view</span>
-                        <div className="tooltip">Dashboard</div>
-                        <h3>Dashboard</h3>
-                    </Link>
-
-                    <Link href="/graph" className={pathname === "/graph" ? "active" : ""}>
-                        <span className="material-symbols-outlined">monitoring</span>
-                        <div className="tooltip">แสดงกราฟ</div>
-                        <h3>แสดงกราฟ</h3>
-                    </Link>
-
-                    <Link href="/history" className={pathname === "/history" ? "active" : ""}>
-                        <span className="material-symbols-outlined">history</span>
-                        <div className="tooltip">ประวัติการทำงาน</div>
-                        <h3>ประวัติการทำงาน</h3>
-                    </Link>
-
-                    <Link href="/settings" className={pathname === "/settings" ? "active" : ""}>
-                        <span className="material-symbols-outlined">settings</span>
-                        <div className="tooltip">ตั้งค่า</div>
-                        <h3>ตั้งค่าโปรไฟล์</h3>
-                    </Link>
-
-                    {!user?.isAdmin && (
-                        <div className="robots-section">
-                        <div className="robots-toggle" onClick={toggleRobots}>
-                            <div className="robots-title">
-                                <span className="material-symbols-outlined">smart_toy</span>
-                                <h3>หุ่นยนต์ของฉัน</h3>
-                            </div>
-                            <button onClick={goToTokenPage}>
-                                <span className="material-symbols-outlined">add</span>
-                            </button>
-                        </div>
-
-                        {showRobots && (
-                            <div className="robot-popup" ref={robotPopupRef}>
-                                <div className="robot-popup-content scrollable-robot-list">
-                                    {loadingRobots ? (
-                                        <p>กำลังโหลด...</p>
-                                    ) : robots.length > 0 ? (
-                                        robots.map((robot) => (
-                                            <p
-                                                key={robot.robot_id}
-                                                className="robot-item"
-                                                onClick={() => {
-                                                    handleSelectRobot(robot);
-                                                    setShowRobots(false);
-                                                }}
-                                            >
-                                                {robot.robot_name}
-                                            </p>
-                                        ))
-                                    ) : (
-                                        <p>ไม่มีหุ่นยนต์</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    )}
-                    
-
-                    <div className="sidebar-footer">
-                        <div className="user-profile">
-                            <img src={profileImage} alt="User Profile" className="profile-pic" />
-                            <div>
-                                <h3>{user?.name ?? "ชื่อผู้ใช้"}</h3>
-                            </div>
-                        </div>
-
-                        <button onClick={handleLogout} className="logout-button">
-                            <span className="material-symbols-outlined">logout</span>
-                            <h3>Logout</h3>
-                        </button>
-                    </div>
+                <div className="logout-btn" title="ออกจากระบบ" onClick={handleLogout}>
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                        <path d="M16 17l5-5-5-5" />
+                        <path d="M21 12H9" />
+                    </svg>
                 </div>
-            </aside>
-        </div>
+            </div>
+        </aside>
     );
 }
