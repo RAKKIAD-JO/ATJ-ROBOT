@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-and-coverage:
-    name: Run Unit Tests & Verify >80% Coverage
+    name: Run Unit Tests, Types & Build Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -34,3 +34,7 @@ jobs:
 
       - name: Run All Unit Tests with Coverage Check
         run: npm test
+
+      - name: Verify Frontend Types & Build
+        run: cd frontend && npm run build
+
