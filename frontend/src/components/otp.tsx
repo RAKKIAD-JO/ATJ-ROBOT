@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/app/contexts/ThemeContext";
 
 export default function OtpPage() {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
 
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
@@ -120,10 +122,31 @@ export default function OtpPage() {
   };
 
   return (
-    <div className="w-full min-h-screen flex justify-center items-center bg-gray-100 p-4">
+    <div className="w-full min-h-screen flex justify-center items-center bg-[var(--bg)] text-[var(--text-hi)] p-4 relative transition-colors duration-300">
+      {/* Theme Toggle Button */}
+      <div className="absolute top-6 right-8 z-10">
+        <button
+          onClick={toggleTheme}
+          className="p-3 rounded-full bg-[var(--panel)] border border-[var(--border)] text-[var(--text-hi)] hover:bg-[var(--panel-raised)] transition-all shadow-md flex items-center justify-center cursor-pointer"
+          title={theme === "dark" ? "เปลี่ยนเป็นโหมดสว่าง (Light Mode)" : "เปลี่ยนเป็นโหมดมืด (Dark Mode)"}
+          aria-label="Toggle Theme"
+        >
+          {theme === "dark" ? (
+            <svg className="w-5 h-5 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="4" strokeWidth="1.8" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" strokeWidth="1.8" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" strokeWidth="1.8" />
+            </svg>
+          )}
+        </button>
+      </div>
+
       {!otpSent && !otpVerified ? (
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-center text-2xl font-bold text-[#3583a4] mb-6">
+        <div className="w-full max-w-md bg-[var(--panel)] border border-[var(--border)] rounded-2xl shadow-2xl p-8 transition-colors duration-300">
+          <h2 className="text-center text-2xl font-bold text-[var(--accent)] mb-6">
             Forgot Password
           </h2>
           <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
@@ -133,18 +156,18 @@ export default function OtpPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#3583a4] focus:ring-2 focus:ring-[#3583a4]/40"
+              className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] text-[var(--text-hi)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
             />
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[#3583a4] hover:bg-[#60afd0] text-white font-medium rounded-lg text-base transition-colors shadow-md disabled:opacity-60"
+              className="w-full py-3 bg-[var(--accent)] hover:opacity-90 text-[#04231F] font-bold rounded-lg text-base transition-colors shadow-md disabled:opacity-60 cursor-pointer"
             >
               {loading ? "Sending..." : "Send OTP"}
             </button>
-            <p className="text-center mt-2 text-sm">
+            <p className="text-center mt-2 text-sm text-[var(--text-mid)]">
               <span
-                className="text-[#3583a4] cursor-pointer font-semibold hover:underline"
+                className="text-[var(--accent)] cursor-pointer font-semibold hover:underline"
                 onClick={() => router.push("/login-registers")}
               >
                 Back to login
@@ -153,8 +176,8 @@ export default function OtpPage() {
           </form>
         </div>
       ) : !otpVerified ? (
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-center text-2xl font-bold text-[#3583a4] mb-6">Enter OTP</h2>
+        <div className="w-full max-w-md bg-[var(--panel)] border border-[var(--border)] rounded-2xl shadow-2xl p-8 transition-colors duration-300">
+          <h2 className="text-center text-2xl font-bold text-[var(--accent)] mb-6">Enter OTP</h2>
           <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
             <input
               maxLength={6}
@@ -163,27 +186,27 @@ export default function OtpPage() {
               value={enteredOtp}
               onChange={(e) => setEnteredOtp(e.target.value)}
               required
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm text-center tracking-widest text-lg focus:outline-none focus:border-[#3583a4] focus:ring-2 focus:ring-[#3583a4]/40"
+              className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] text-[var(--text-hi)] rounded-lg text-center tracking-widest text-lg focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
             />
             <div className="flex gap-3">
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-3 bg-[#3583a4] hover:bg-[#60afd0] text-white font-medium rounded-lg text-sm transition-colors shadow-md disabled:opacity-60"
+                className="flex-1 py-3 bg-[var(--accent)] hover:opacity-90 text-[#04231F] font-bold rounded-lg text-sm transition-colors shadow-md disabled:opacity-60 cursor-pointer"
               >
                 {loading ? "Verifying..." : "Verify"}
               </button>
               <button
                 type="button"
-                className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg text-sm transition-colors"
+                className="px-4 py-3 bg-[var(--panel-raised)] text-[var(--text-hi)] hover:opacity-80 font-medium rounded-lg text-sm transition-colors cursor-pointer"
                 onClick={handleSendOtp}
               >
                 Send Again
               </button>
             </div>
-            <p className="text-center mt-2 text-sm">
+            <p className="text-center mt-2 text-sm text-[var(--text-mid)]">
               <span
-                className="text-[#3583a4] cursor-pointer font-semibold hover:underline"
+                className="text-[var(--accent)] cursor-pointer font-semibold hover:underline"
                 onClick={() => router.push("/login-registers")}
               >
                 Back to login
@@ -192,16 +215,16 @@ export default function OtpPage() {
           </form>
         </div>
       ) : (
-        <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl flex flex-col-reverse md:flex-row overflow-hidden">
+        <div className="w-full max-w-4xl bg-[var(--panel)] border border-[var(--border)] rounded-2xl shadow-2xl flex flex-col-reverse md:flex-row overflow-hidden transition-colors duration-300">
           <div className="p-8 w-full md:w-1/2 flex flex-col justify-center">
-            <h2 className="text-center text-2xl font-bold text-[#3583a4] mb-6">Reset Password</h2>
+            <h2 className="text-center text-2xl font-bold text-[var(--accent)] mb-6">Reset Password</h2>
             <form onSubmit={handlerResetPassword} className="flex flex-col gap-4">
               <input
                 type="email"
                 placeholder="Email"
                 value={email}
                 readOnly
-                className="w-full p-3 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+                className="w-full p-3 border border-[var(--border)] bg-[var(--bg)] rounded-lg text-sm text-[var(--text-low)] cursor-not-allowed"
               />
               <input
                 type="password"
@@ -209,7 +232,7 @@ export default function OtpPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#3583a4] focus:ring-2 focus:ring-[#3583a4]/40"
+                className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] text-[var(--text-hi)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
               />
               <input
                 type="password"
@@ -217,20 +240,20 @@ export default function OtpPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#3583a4] focus:ring-2 focus:ring-[#3583a4]/40"
+                className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] text-[var(--text-hi)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-[#3583a4] hover:bg-[#60afd0] text-white font-medium rounded-lg text-base transition-colors shadow-md mt-2 disabled:opacity-60"
+                className="w-full py-3 bg-[var(--accent)] hover:opacity-90 text-[#04231F] font-bold rounded-lg text-base transition-colors shadow-md mt-2 disabled:opacity-60 cursor-pointer"
               >
                 {loading ? "Processing..." : "Reset Password"}
               </button>
             </form>
 
-            <p className="text-center mt-6 text-sm">
+            <p className="text-center mt-6 text-sm text-[var(--text-mid)]">
               <span
-                className="text-[#3583a4] cursor-pointer font-semibold hover:underline"
+                className="text-[var(--accent)] cursor-pointer font-semibold hover:underline"
                 onClick={() => router.push("/login-registers")}
               >
                 Back to Login
@@ -238,14 +261,14 @@ export default function OtpPage() {
             </p>
           </div>
 
-          <div className="w-full md:w-1/2 bg-slate-50 p-8 flex flex-col justify-center items-center border-b md:border-b-0 md:border-l border-gray-100">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-[#3583a4] text-center mb-6 capitalize">
+          <div className="w-full md:w-1/2 bg-[var(--panel-alt)] p-8 flex flex-col justify-center items-center border-b md:border-b-0 md:border-l border-[var(--border)]">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-[var(--text-hi)] text-center mb-6 capitalize tracking-tight">
               welcome ATJ robot
             </h1>
             <img
               src="/logomine1.png"
               alt="Login"
-              className="w-48 h-48 md:w-64 md:h-64 object-contain rounded-xl"
+              className="w-48 h-48 md:w-64 md:h-64 object-contain rounded-xl drop-shadow-lg"
             />
           </div>
         </div>
@@ -253,10 +276,10 @@ export default function OtpPage() {
 
       {/* Modal */}
       {modalMessage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
-          <div className="bg-white p-8 rounded-3xl w-80 text-center relative shadow-2xl animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999]">
+          <div className="bg-[var(--panel)] border border-[var(--border)] p-8 rounded-3xl w-80 text-center relative shadow-2xl animate-fade-in">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-2xl font-bold transition-colors"
+              className="absolute top-4 right-4 text-[var(--text-mid)] hover:text-[var(--danger)] text-2xl font-bold transition-colors cursor-pointer"
               onClick={closeModal}
             >
               ×
@@ -264,15 +287,15 @@ export default function OtpPage() {
             <div className="flex justify-center items-center mb-4">
               <span
                 className={`material-symbols-outlined text-5xl ${
-                  modalType === "success" ? "text-[#17a2b8]" : "text-red-500"
+                  modalType === "success" ? "text-[var(--good)]" : "text-[var(--danger)]"
                 }`}
               >
                 {modalType === "success" ? "check_circle" : "cancel"}
               </span>
             </div>
-            <p className="text-gray-700 text-sm mb-6">{modalMessage}</p>
+            <p className="text-[var(--text-hi)] text-sm mb-6">{modalMessage}</p>
             <button
-              className="w-full py-2 bg-[#88b7b9] hover:bg-[#17a2b8] text-white font-medium rounded-xl text-sm transition-colors shadow-md"
+              className="w-full py-2 bg-[var(--accent)] hover:opacity-90 text-[#04231F] font-bold rounded-xl text-sm transition-colors shadow-md cursor-pointer"
               onClick={closeModal}
             >
               ตกลง

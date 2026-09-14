@@ -23,7 +23,7 @@ describe('formatters utility functions', () => {
 
     it('should handle non-number inputs', () => {
       expect(formatBatteryPercentage(NaN)).toBe('0%');
-      // @ts-ignore
+      // @ts-expect-error testing invalid type
       expect(formatBatteryPercentage('50')).toBe('0%');
     });
   });
