@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "concurrently -n \"BACKEND,IOT-SERVER,FRONTEND\" -c \"blue,magenta,cyan\" \"npm --prefix backend start\" \"npm --prefix iot-server start\" \"npm --prefix frontend run dev\"",
-    "sim": "node simulate_robot.js"
+    "sim": "node simulate_robot.js",
+    "test": "npm --prefix backend run test && npm --prefix iot-server run test && npm --prefix frontend run test",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "husky": "^9.1.7"
   },
   "dependencies": {
     "react-spinners": "^0.17.0",

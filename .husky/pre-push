@@ -1,0 +1,12 @@
+#!/bin/sh
+echo "🔍 Running unit tests & checking 80%+ coverage before pushing..."
+
+npm test
+
+if [ $? -ne 0 ]; then
+  echo "❌ Git push aborted! Tests failed or code coverage is below 80%."
+  exit 1
+fi
+
+echo "✅ All tests passed with >80% coverage! Proceeding with push..."
+exit 0

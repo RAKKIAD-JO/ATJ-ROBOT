@@ -1,0 +1,36 @@
+name: Unit Tests & Code Coverage Check
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  test-and-coverage:
+    name: Run Unit Tests & Verify >80% Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Root Dependencies
+        run: npm ci || npm install
+
+      - name: Install Backend Dependencies
+        run: cd backend && (npm ci || npm install)
+
+      - name: Install IoT-Server Dependencies
+        run: cd iot-server && (npm ci || npm install)
+
+      - name: Install Frontend Dependencies
+        run: cd frontend && (npm ci || npm install)
+
+      - name: Run All Unit Tests with Coverage Check
+        run: npm test
