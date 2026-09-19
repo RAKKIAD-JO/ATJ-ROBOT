@@ -6,6 +6,8 @@ import Topbar from "@/components/topbar";
 import { SelectedRobotProvider } from "@/app/contexts/SelectedRobotContext";
 import { ThemeProvider } from "@/app/contexts/ThemeContext";
 
+import ChatBot from "@/components/chatBot";
+
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
@@ -29,6 +31,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         {showSidebar && <Topbar />}
                         {children}
                     </div>
+                    {showSidebar && <ChatBot />}
                 </div>
             </SelectedRobotProvider>
         </ThemeProvider>
