@@ -61,8 +61,14 @@ services:
     environment:
       - BACKEND_INTERNAL_URL=http://backend:5000
       - IOT_INTERNAL_URL=http://iot-server:3000
+      - WATCHPACK_POLLING=true
     ports:
       - "4000:4000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
     networks:
       - ${NETWORK_NAME}
 
