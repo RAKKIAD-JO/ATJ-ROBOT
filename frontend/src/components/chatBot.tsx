@@ -66,7 +66,7 @@ export default function ChatBot() {
             };
 
             setMessages((prev) => [...prev, botMsg]);
-        } catch (error) {
+        } catch {
             setMessages((prev) => [
                 ...prev,
                 {
